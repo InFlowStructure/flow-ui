@@ -1,0 +1,12 @@
+[submodule "third_party/imgui_bundle"]
+	path = third_party/imgui_bundle
+	url = https://github.com/pthom/imgui_bundle.git
+[submodule "third_party/nfd"]
+	path = third_party/nfd
+	url = https://github.com/btzy/nativefiledialog-extended.git
+[submodule "third_party/flow-core"]
+	path = third_party/flow-core
+	url = https://github.com/InFlowStructure/flow-core.git
+[submodule "third_party/spdlog"]
+	path = third_party/spdlog
+	url = https://github.com/gabime/spdlog.git
