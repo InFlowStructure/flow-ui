@@ -14,10 +14,14 @@ if(APPLE)
 endif()
 
 # -----------------------------------------------------------------------------
-# Dependencies
+# Options
 # -----------------------------------------------------------------------------
 
 option(flow-ui_USE_EXTERNAL_FLOW_CORE "Use an external Flow Core library" OFF)
+
+# -----------------------------------------------------------------------------
+# Dependencies
+# -----------------------------------------------------------------------------
 
 if (flow-ui_USE_EXTERNAL_FLOW_CORE)
   find_package(nlohmann_json REQUIRED)
@@ -65,6 +69,8 @@ add_library(${PROJECT_NAME} SHARED
   src/utilities/Builders.cpp
   src/utilities/Widgets.cpp
 )
+
+add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
 if(MSVC)
   add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
