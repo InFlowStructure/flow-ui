@@ -20,6 +20,8 @@ namespace ed = ax::NodeEditor;
 
 struct Style
 {
+    Style();
+
     struct
     {
         widgets::IconType Default;

@@ -7,12 +7,13 @@
 #include <cstdint>
 
 FLOW_UI_NAMESPACE_START
-static Style style{
-    .PortShapes{
+
+Style::Style()
+    : PortShapes{
         .Default = widgets::IconType::Circle,
         .Ref     = widgets::IconType::Diamond,
     },
-    .PortColours{
+    PortColours{
         {std::string{TypeName_v<std::any>}, ImColor(120, 120, 127)},
 
         {std::string{"flow::Nodes::ReflectType"}, ImColor(6, 68, 154)},
@@ -33,8 +34,12 @@ static Style style{
         {std::string{TypeName_v<double>}, ImColor(147, 226, 74)},
 
         {std::string{TypeName_v<std::string>}, ImColor(124, 21, 153)},
-    },
-};
+    }
+{
+    std::copy_n(ed::Style{}.Colors, ed::StyleColor_Count, Colours);
+}
+
+static Style style{};
 
 Style& GetStyle() { return style; }
 

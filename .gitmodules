@@ -1,6 +1,7 @@
 [submodule "third_party/imgui_bundle"]
 	path = third_party/imgui_bundle
 	url = https://github.com/pthom/imgui_bundle.git
+	branch = v1.5.0-rc1
 [submodule "third_party/nfd"]
 	path = third_party/nfd
 	url = https://github.com/btzy/nativefiledialog-extended.git

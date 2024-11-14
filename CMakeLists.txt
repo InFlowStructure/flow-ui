@@ -4,7 +4,7 @@ if(NOT PROJECT_NAME)
   add_compile_definitions(FLOW_UI_EXPORT)
 endif()
 
-project(flow-ui VERSION 1.0 LANGUAGES CXX)
+project(flow-ui VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -44,6 +44,17 @@ if(MSVC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /utf-8")
 endif()
 
+set(flow-ui_HEADERS_DIR "${CMAKE_CURRENT_LIST_DIR}/include/flow/ui")
+file(GLOB flow-ui_HEADERS "${flow-ui_HEADERS_DIR}/*.hpp")
+file(GLOB flow-ui_UTILITY_HEADERS "${flow-ui_HEADERS_DIR}/utilities/*.hpp")
+file(GLOB flow-ui_VIEW_HEADERS "${flow-ui_HEADERS_DIR}/views/*.hpp")
+file(GLOB flow-ui_WINDOW_HEADERS "${flow-ui_HEADERS_DIR}/windows/*.hpp")
+list(APPEND flow-ui_HEADERS
+  ${flow-ui_UTILITY_HEADERS}
+  ${flow-ui_VIEW_HEADERS}
+  ${flow-ui_WINDOW_HEADERS}
+)
+
 add_library(${PROJECT_NAME} SHARED
   # Main source files
   src/Config.cpp
@@ -68,6 +79,8 @@ add_library(${PROJECT_NAME} SHARED
   # Utility files
   src/utilities/Builders.cpp
   src/utilities/Widgets.cpp
+
+  ${flow-ui_HEADERS}
 )
 
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
@@ -79,18 +92,15 @@ endif()
 
 target_include_directories(${PROJECT_NAME}
   PUBLIC
-    $<BUILD_INTERFACE:${thread_pool_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   PRIVATE
     ${PROJECT_SOURCE_DIR}/include
-)
-
-target_include_directories(${PROJECT_NAME} PRIVATE
-  ${PROJECT_SOURCE_DIR}/include/flow/ui
-  ${PROJECT_SOURCE_DIR}/include/flow/ui/views
-  ${PROJECT_SOURCE_DIR}/include/flow/ui/windows
-  ${PROJECT_SOURCE_DIR}/include/flow/ui/utilities
-  ${PROJECT_SOURCE_DIR}/include/flow/ui/widgets
+    ${PROJECT_SOURCE_DIR}/include/flow/ui
+    ${PROJECT_SOURCE_DIR}/include/flow/ui/views
+    ${PROJECT_SOURCE_DIR}/include/flow/ui/windows
+    ${PROJECT_SOURCE_DIR}/include/flow/ui/utilities
+    ${PROJECT_SOURCE_DIR}/include/flow/ui/widgets
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -101,6 +111,14 @@ target_link_libraries(${PROJECT_NAME}
   nfd
 )
 target_compile_definitions(${PROJECT_NAME} PUBLIC IMGUI_DEFINE_MATH_OPERATORS)
+
+if(MSVC)
+  add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_RUNTIME_DLLS:${PROJECT_NAME}>
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>
+  )
+endif()
 
 # -----------------------------------------------------------------------------
 # Install

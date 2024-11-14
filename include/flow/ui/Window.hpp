@@ -11,9 +11,9 @@ FLOW_UI_NAMESPACE_START
 
 struct DefaultDockspaces
 {
-    static inline const std::string FLOW_UI_API Main     = "MainDockSpace";
-    static inline const std::string FLOW_UI_API Property = "PropertySpace";
-    static inline const std::string FLOW_UI_API Misc     = "MiscSpace";
+    static inline const std::string Main     = "MainDockSpace";
+    static inline const std::string Property = "PropertySpace";
+    static inline const std::string Misc     = "MiscSpace";
 };
 
 class Window
