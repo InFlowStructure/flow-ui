@@ -20,4 +20,5 @@ set(HELLOIMGUI_USE_FREETYPE OFF CACHE BOOL "")
 add_subdirectory(imgui_bundle)
 add_subdirectory(nfd)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_subdirectory(spdlog)

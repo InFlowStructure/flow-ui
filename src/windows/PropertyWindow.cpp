@@ -62,7 +62,7 @@ void PropertyWindow::Draw()
 
     graph->Visit([&](auto& node) {
         if (!ids.contains(std::hash<flow::UUID>{}(node->ID()))) return;
-        nodes.emplace_back(std::string{node->GetName()}, node);
+        nodes.emplace_back(NodeProperty{std::string{node->GetName()}, node});
     });
 
     ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(38, 38, 38, 255));

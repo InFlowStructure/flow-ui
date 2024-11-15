@@ -349,13 +349,13 @@ void GraphWindow::DeleteNode(ed::NodeId id)
         for (const auto& [link_id, link] : _links)
         {
             if (std::any_of(node->Inputs.begin(), node->Inputs.end(),
-                            [&](const auto& in) { return in->ID == link.EndPinID; }))
+                            [&, end_pin_id = link.EndPinID](const auto& in) { return in->ID == end_pin_id; }))
             {
                 links_to_delete.push_back(link_id);
             }
 
             if (std::any_of(node->Outputs.begin(), node->Outputs.end(),
-                            [&](const auto& out) { return out->ID == link.StartPinID; }))
+                            [&, start_pin_id = link.StartPinID](const auto& out) { return out->ID == start_pin_id; }))
             {
                 links_to_delete.push_back(link_id);
             }
@@ -880,7 +880,7 @@ void GraphWindow::CreateNodesAction(const json& SPDLOG_json)
         OnLoadConnection(conn);
     }
 
-    _undo_history.emplace(ActionType::Create, new_diff);
+    _undo_history.push(Action{ActionType::Create, new_diff});
 }
 
 void GraphWindow::DeleteNodesAction(Action& action)
@@ -896,7 +896,7 @@ void GraphWindow::DeleteNodesAction(Action& action)
         ed::DeleteNode(id);
     }
 
-    _undo_history.emplace(ActionType::Delete, action.Info);
+    _undo_history.push(Action{ActionType::Delete, action.Info});
 }
 
 void GraphWindow::UndoChange()
