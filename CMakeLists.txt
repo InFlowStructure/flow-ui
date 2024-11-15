@@ -23,8 +23,17 @@ option(flow-ui_USE_EXTERNAL_FLOW_CORE "Use an external Flow Core library" OFF)
 # Dependencies
 # -----------------------------------------------------------------------------
 
+find_package(nlohmann_json CONFIG QUIET)
+if (NOT nlohmann_json_FOUND)
+  include(FetchContent)
+  FetchContent_Declare(
+    nlohmann_json OVERRIDE_FIND_PACKAGE
+    URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
+  )
+  FetchContent_MakeAvailable(nlohmann_json)
+endif()
+
 if (flow-ui_USE_EXTERNAL_FLOW_CORE)
-  find_package(nlohmann_json REQUIRED)
   find_package(flow-core REQUIRED)
 endif()
 

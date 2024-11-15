@@ -1,3 +1,8 @@
+if (NOT flow-ui_USE_EXTERNAL_FLOW_CORE)
+    set(flow-core_USE_EXTERNAL_JSON ON CACHE BOOL "")
+    add_subdirectory(flow-core)
+endif()
+
 set(IMGUI_BUNDLE_BUILD_PYTHON OFF CACHE BOOL "")
 set(IMGUI_BUNDLE_DISABLE_IMFILEDIALOG ON CACHE BOOL "")
 set(IMGUI_BUNDLE_DISABLE_IMGUIZMO ON CACHE BOOL "")
@@ -14,9 +19,5 @@ set(HELLOIMGUI_USE_FREETYPE OFF CACHE BOOL "")
 
 add_subdirectory(imgui_bundle)
 add_subdirectory(nfd)
-
-if (NOT flow-ui_USE_EXTERNAL_FLOW_CORE)
-    add_subdirectory(flow-core)
-endif()
 
 add_subdirectory(spdlog)
