@@ -8,35 +8,132 @@
 
 #include <flow/core/TypeName.hpp>
 #include <imgui.h>
-#include <imgui_node_editor.h>
 
 #include <array>
+#include <cstdint>
 #include <string>
 #include <unordered_map>
 
 FLOW_UI_NAMESPACE_START
 
-using namespace ax;
-namespace ed = ax::NodeEditor;
+struct Colour
+{
+  public:
+    constexpr Colour() noexcept = default;
+    constexpr Colour(std::uint8_t r, std::uint8_t g, std::uint8_t b) : R(r), G(g), B(b) {}
+    constexpr Colour(std::uint8_t r, std::uint8_t g, std::uint8_t b, std::uint8_t a) : R(r), G(g), B(b), A(a) {}
+
+  public:
+    std::uint8_t R = 255;
+    std::uint8_t G = 255;
+    std::uint8_t B = 255;
+    std::uint8_t A = 255;
+};
 
 struct Style
 {
   public:
+    enum class BaseColours : std::uint8_t
+    {
+        Border,
+        BorderShadow,
+        Button,
+        ButtonActive,
+        ButtonHovered,
+        CheckMark,
+        ChildBg,
+        DockingEmptyBg,
+        DockingPreview,
+        DragDropTarget,
+        FrameBg,
+        FrameBgActive,
+        FrameBgHovered,
+        Header,
+        HeaderActive,
+        HeaderHovered,
+        MenuBarBg,
+        ModalWindowDimBg,
+        NavCursor,
+        NavWindowingDimBg,
+        NavWindowingHighlight,
+        PlotHistogram,
+        PlotHistogramHovered,
+        PlotLines,
+        PlotLinesHovered,
+        PopupBg,
+        ResizeGrip,
+        ResizeGripActive,
+        ResizeGripHovered,
+        ScrollbarBg,
+        ScrollbarGrab,
+        ScrollbarGrabActive,
+        ScrollbarGrabHovered,
+        Separator,
+        SeparatorActive,
+        SeparatorHovered,
+        SliderGrab,
+        SliderGrabActive,
+        Tab,
+        TabDimmed,
+        TabDimmedSelected,
+        TabDimmedSelectedOverline,
+        TabHovered,
+        TableBorderLight,
+        TableBorderStrong,
+        TableHeaderBg,
+        TableRowBg,
+        TableRowBgAlt,
+        TabSelected,
+        TabSelectedOverline,
+        Text,
+        TextDisabled,
+        TextLink,
+        TextSelectedBg,
+        TitleBg,
+        TitleBgActive,
+        TitleBgCollapsed,
+        WindowBg,
+    };
+
+    enum class NodeEditorColours : std::uint8_t
+    {
+        Bg,
+        Flow,
+        FlowMarker,
+        Grid,
+        GroupBg,
+        GroupBorder,
+        HighlightLinkBorder,
+        HovLinkBorder,
+        HovNodeBorder,
+        LinkSelRect,
+        LinkSelRectBorder,
+        NodeBg,
+        NodeBorder,
+        NodeSelRect,
+        NodeSelRectBorder,
+        PinRect,
+        PinRectBorder,
+        SelLinkBorder,
+        SelNodeBorder,
+    };
+
+  public:
     Style();
 
-    void SetPortColour(std::string_view type, ImVec4 colour);
-    ImColor GetPortColour(std::string_view type) const;
+    void SetTypeColour(std::string_view type, const Colour& colour);
+    Colour GetTypeColour(std::string_view type) const;
 
     template<typename T>
-    void SetPortColour(ImVec4 colour)
+    void SetTypeColour(const Colour& colour)
     {
-        return SetPortColour(flow::TypeName_v<T>, std::move(colour));
+        return SetTypeColour(flow::TypeName_v<T>, colour);
     }
 
     template<typename T>
-    ImColor GetPortColour() const
+    Colour GetTypeColour() const
     {
-        return GetPortColour(flow::TypeName_v<T>);
+        return GetTypeColour(flow::TypeName_v<T>);
     }
 
   public:
@@ -48,11 +145,22 @@ struct Style
 
     struct
     {
-        std::array<ImVec4, ed::StyleColor_Count> NodeEdtiorColours;
-        std::unordered_map<std::string, ImVec4> PortColours;
+        std::map<BaseColours, Colour> BaseColours;
+        std::map<NodeEditorColours, Colour> NodeEdtiorColours;
+        std::unordered_map<std::string_view, Colour> TypeColours;
     } Colours;
 
-    ImFont* NodeHeaderFont = nullptr;
+    float CircleTessellationMaxError;
+    float CurveTessellationTol;
+    float WindowBorderSize;
+    float FrameBorderSize;
+    float TabRounding;
+    float TabBarBorderSize;
+    struct
+    {
+        float Width;
+        float Height;
+    } CellPadding;
 };
 
 Style& GetStyle();

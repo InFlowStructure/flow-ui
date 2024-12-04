@@ -8,11 +8,13 @@
 #include "ViewFactory.hpp"
 #include "Widgets.hpp"
 #include "Window.hpp"
+#include "utilities/Conversions.hpp"
 
 #include <flow/core/Node.hpp>
 #include <flow/core/NodeFactory.hpp>
 #include <flow/core/Port.hpp>
 #include <flow/core/UUID.hpp>
+#include <hello_imgui/hello_imgui.h>
 #include <hello_imgui/icons_font_awesome_6.h>
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -25,6 +27,8 @@
 
 FLOW_UI_NAMESPACE_START
 
+HelloImGui::RunnerParams _params;
+
 Editor::Editor(const std::string& initial_file)
 {
     _params.appWindowParams.windowTitle             = "Flow Code";
@@ -35,7 +39,10 @@ Editor::Editor(const std::string& initial_file)
 
     _params.callbacks.PostInit = [&] {
         GetConfig().RenderBackend = _params.rendererBackendType;
-        SetupStyle(ImGui::GetStyle(), GetStyle());
+
+        SetupStyle(GetStyle());
+        utility::to_ImGuiStyle(GetStyle());
+
         Init(initial_file);
     };
     _params.callbacks.BeforeExit = [&] { Teardown(); };
@@ -100,9 +107,53 @@ Editor::Editor(const std::string& initial_file)
     _params.imGuiWindowParams.showMenu_View_Themes = false;
     _params.fpsIdling.enableIdling                 = false;
 
-    _params.callbacks.SetupImGuiStyle     = [&] { SetupStyle(ImGui::GetStyle(), GetStyle()); };
-    _params.callbacks.LoadAdditionalFonts = [&] { LoadFonts(ImGui::GetIO(), GetConfig()); };
-    _params.callbacks.ShowMenus           = [&] {
+    _params.callbacks.SetupImGuiStyle = [&] {
+        auto& imgui_style = ImGui::GetStyle();
+
+        imgui_style.CircleTessellationMaxError = 0.1f;
+        imgui_style.CurveTessellationTol       = 0.1f;
+        imgui_style.WindowBorderSize           = 5.f;
+        imgui_style.FrameBorderSize            = 2.f;
+        imgui_style.TabRounding                = 8.f;
+        imgui_style.TabBarBorderSize           = 0.f;
+        imgui_style.CellPadding                = ImVec2(7.f, 7.f);
+
+        auto& imgui_colours = imgui_style.Colors;
+
+        imgui_colours[ImGuiCol_WindowBg]           = ImColor(21, 21, 21);
+        imgui_colours[ImGuiCol_PopupBg]            = ImColor(15, 15, 15, 175);
+        imgui_colours[ImGuiCol_Border]             = ImColor(15, 15, 15);
+        imgui_colours[ImGuiCol_PopupBg]            = imgui_colours[ImGuiCol_WindowBg];
+        imgui_colours[ImGuiCol_FrameBg]            = ImColor(15, 15, 15);
+        imgui_colours[ImGuiCol_MenuBarBg]          = ImColor(21, 21, 21);
+        imgui_colours[ImGuiCol_TitleBg]            = ImColor(21, 21, 21);
+        imgui_colours[ImGuiCol_TitleBgActive]      = imgui_colours[ImGuiCol_TitleBg];
+        imgui_colours[ImGuiCol_Tab]                = ImColor(21, 21, 21);
+        imgui_colours[ImGuiCol_TabUnfocused]       = ImColor(21, 21, 21);
+        imgui_colours[ImGuiCol_TabHovered]         = ImColor(47, 47, 47);
+        imgui_colours[ImGuiCol_TabActive]          = ImColor(3, 98, 195);
+        imgui_colours[ImGuiCol_TabUnfocusedActive] = imgui_colours[ImGuiCol_TabActive];
+        imgui_colours[ImGuiCol_Button]             = ImColor(32, 32, 32);
+        imgui_colours[ImGuiCol_ButtonHovered]      = ImColor(3, 98, 195);
+        imgui_colours[ImGuiCol_ButtonActive]       = ImColor(13, 39, 77);
+        imgui_colours[ImGuiCol_ScrollbarBg]        = ImColor(21, 21, 21);
+        imgui_colours[ImGuiCol_ScrollbarGrab]      = ImColor(86, 86, 86);
+        imgui_colours[ImGuiCol_TableBorderLight]   = ImColor(21, 21, 21);
+        imgui_colours[ImGuiCol_TableBorderStrong]  = ImColor(21, 21, 21);
+        imgui_colours[ImGuiCol_TableRowBg]         = ImColor(36, 36, 36);
+        imgui_colours[ImGuiCol_TableRowBgAlt]      = ImColor(36, 36, 36);
+        imgui_colours[ImGuiCol_Header]             = ImColor(47, 47, 47);
+        imgui_colours[ImGuiCol_HeaderHovered]      = ImColor(50, 50, 50);
+        imgui_colours[ImGuiCol_CheckMark]          = ImColor(3, 98, 195);
+
+        SetupStyle(GetStyle());
+    };
+    _params.callbacks.LoadAdditionalFonts = [&] {
+        auto& config = GetConfig();
+        LoadFonts(config);
+        ImGui::GetIO().FontDefault = config.DefaultFont;
+    };
+    _params.callbacks.ShowMenus = [&] {
         DrawMainMenuBar();
         HelloImGui::ShowViewMenu(_params);
     };

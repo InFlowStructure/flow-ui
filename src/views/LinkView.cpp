@@ -2,19 +2,20 @@
 // All rights reserved.
 
 #include "LinkView.hpp"
+#include "utilities/Conversions.hpp"
 
 #include <stdexcept>
 
 FLOW_UI_NAMESPACE_START
 
-Link::Link(const flow::UUID& connection_id, ed::PinId startPinId, ed::PinId endPinId, ImColor colour)
-    : ID(std::hash<flow::UUID>{}(connection_id)), StartPinID(startPinId), EndPinID(endPinId), Colour(colour)
+Link::Link(const flow::UUID& connection_id, ed::PinId startPinId, ed::PinId endPinId, const Colour& colour)
+    : ID(std::hash<flow::UUID>{}(connection_id)), StartPinID(startPinId), EndPinID(endPinId), _colour(colour)
 {
 }
 
 void Link::Draw()
 {
-    if (!ed::Link(ID, StartPinID, EndPinID, Colour, 2.0f))
+    if (!ed::Link(ID, StartPinID, EndPinID, utility::to_ImColor(_colour), 2.0f))
     {
         throw std::runtime_error("Failed to set link for pins");
     }

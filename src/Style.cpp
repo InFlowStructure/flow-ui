@@ -2,61 +2,79 @@
 // All rights reserved.
 
 #include "Style.hpp"
+#include "utilities/Conversions.hpp"
+
+#include <imgui_node_editor.h>
 
 #include <any>
 #include <cstdint>
 
 FLOW_UI_NAMESPACE_START
 
+using namespace ax;
+namespace ed = ax::NodeEditor;
+
 Style::Style()
     : PortShapes{
         .Default = widgets::IconType::Circle,
         .Ref     = widgets::IconType::Diamond,
     },
-    Colours{.PortColours{
-        {std::string{TypeName_v<std::any>}, ImColor(120, 120, 127)},
+    Colours{.TypeColours{
+        {TypeName_v<std::any>, Colour(120, 120, 127)},
 
-        {std::string{"flow::Nodes::ReflectType"}, ImColor(6, 68, 154)},
-        {std::string{"flow::EnumAsByte"}, ImColor(0, 109, 99)},
+        {"flow::Struct", Colour(6, 68, 154)},
+        {"flow::EnumAsByte", Colour(0, 109, 99)},
 
-        {std::string{TypeName_v<bool>}, ImColor(220, 48, 48)},
+        {TypeName_v<bool>, Colour(220, 48, 48)},
 
-        {std::string{TypeName_v<std::int8_t>}, ImColor(68, 201, 156)},
-        {std::string{TypeName_v<std::int16_t>}, ImColor(68, 201, 156)},
-        {std::string{TypeName_v<std::int32_t>}, ImColor(68, 201, 156)},
-        {std::string{TypeName_v<std::int64_t>}, ImColor(68, 201, 156)},
-        {std::string{TypeName_v<std::uint8_t>}, ImColor(68, 201, 156)},
-        {std::string{TypeName_v<std::uint16_t>}, ImColor(68, 201, 156)},
-        {std::string{TypeName_v<std::uint32_t>}, ImColor(68, 201, 156)},
-        {std::string{TypeName_v<std::uint64_t>}, ImColor(68, 201, 156)},
+        {TypeName_v<std::int8_t>, Colour(68, 201, 156)},
+        {TypeName_v<std::int16_t>, Colour(68, 201, 156)},
+        {TypeName_v<std::int32_t>, Colour(68, 201, 156)},
+        {TypeName_v<std::int64_t>, Colour(68, 201, 156)},
+        {TypeName_v<std::uint8_t>, Colour(68, 201, 156)},
+        {TypeName_v<std::uint16_t>, Colour(68, 201, 156)},
+        {TypeName_v<std::uint32_t>, Colour(68, 201, 156)},
+        {TypeName_v<std::uint64_t>, Colour(68, 201, 156)},
 
-        {std::string{TypeName_v<float>}, ImColor(147, 226, 74)},
-        {std::string{TypeName_v<double>}, ImColor(147, 226, 74)},
+        {TypeName_v<float>, Colour(147, 226, 74)},
+        {TypeName_v<double>, Colour(147, 226, 74)},
 
-        {std::string{TypeName_v<std::string>}, ImColor(124, 21, 153)},
-    }
-    }
+        {TypeName_v<std::string>, Colour(124, 21, 153)},
+    }},
+    CircleTessellationMaxError(0.1f),
+    CurveTessellationTol(0.1f),
+    WindowBorderSize(5.f),
+    FrameBorderSize(2.f),
+    TabRounding(8.f),
+    TabBarBorderSize(0.f),
+    CellPadding{.Width = 7.f, .Height = 7.f}
 {
-    std::copy_n(ed::Style{}.Colors, ed::StyleColor_Count, std::begin(Colours.NodeEdtiorColours));
+    auto ed_style    = ed::Style{};
+    auto& ed_colours = ed_style.Colors;
+
+    int i = 0;
+    std::for_each(std::begin(ed_colours), std::end(ed_colours), [&](const auto& c) {
+        Colours.NodeEdtiorColours[utility::to_NodeEditorColours(ed::StyleColor(i++))] = utility::to_Colour(c);
+    });
 }
 
 static Style style{};
 
 Style& GetStyle() { return style; }
 
-void Style::SetPortColour(std::string_view type, ImVec4 colour)
+void Style::SetTypeColour(std::string_view type, const Colour& colour)
 {
-    Colours.PortColours[std::string{type}] = std::move(colour);
+    Colours.TypeColours[type] = std::move(colour);
 }
 
-ImColor Style::GetPortColour(std::string_view type) const
+Colour Style::GetTypeColour(std::string_view type) const
 {
-    if (Colours.PortColours.contains(std::string{type}))
+    if (Colours.TypeColours.contains(type))
     {
-        return Colours.PortColours.at(std::string{type});
+        return Colours.TypeColours.at(type);
     }
 
-    for (const auto& [port_type, colour] : Colours.PortColours)
+    for (const auto& [port_type, colour] : Colours.TypeColours)
     {
         if (type.find(port_type) != std::string_view::npos)
         {
@@ -64,6 +82,6 @@ ImColor Style::GetPortColour(std::string_view type) const
         }
     }
 
-    return ImColor(255, 255, 255);
+    return Colour(255, 255, 255);
 }
 FLOW_UI_NAMESPACE_END

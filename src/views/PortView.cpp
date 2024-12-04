@@ -7,6 +7,7 @@
 #include "LinkView.hpp"
 #include "ViewFactory.hpp"
 #include "Widgets.hpp"
+#include "utilities/Conversions.hpp"
 
 #include <flow/core/Env.hpp>
 #include <flow/core/NodeData.hpp>
@@ -37,9 +38,10 @@ IconType GetIconType(std::string_view type)
 
 void DrawPinIcon(const PortView& pin, bool connected, int alpha)
 {
-    auto colour    = pin.Colour();
-    colour.Value.w = alpha / 255.0f;
-    widgets::Icon(ImVec2(24.f, 24.f), GetIconType(pin.Type()), connected, colour, ImColor(32, 32, 32, alpha));
+    auto colour = pin.Colour();
+    colour.A    = alpha;
+    widgets::Icon(ImVec2(24.f, 24.f), GetIconType(pin.Type()), connected, utility::to_ImColor(colour),
+                  ImColor(32, 32, 32, alpha));
 }
 } // namespace
 

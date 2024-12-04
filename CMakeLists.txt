@@ -108,6 +108,7 @@ target_include_directories(${PROJECT_NAME}
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   PRIVATE
+    ${PROJECT_SOURCE_DIR}/src
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/include/flow/ui
     ${PROJECT_SOURCE_DIR}/include/flow/ui/views
@@ -116,13 +117,16 @@ target_include_directories(${PROJECT_NAME}
     ${PROJECT_SOURCE_DIR}/include/flow/ui/widgets
 )
 
-target_link_libraries(${PROJECT_NAME}
+target_link_libraries(${PROJECT_NAME} PUBLIC
   flow-core::flow-core
   nlohmann_json::nlohmann_json
   spdlog::spdlog
+  imgui_node_editor
+)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
   imgui
   hello_imgui
-  imgui_node_editor
   nfd
 )
 target_compile_definitions(${PROJECT_NAME} PUBLIC IMGUI_DEFINE_MATH_OPERATORS)

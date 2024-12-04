@@ -15,7 +15,6 @@
 
 #include <flow/core/Env.hpp>
 #include <flow/core/Event.hpp>
-#include <hello_imgui/hello_imgui.h>
 #include <imgui_node_editor.h>
 
 #include <deque>
@@ -51,8 +50,8 @@ class Editor
     std::shared_ptr<Env> GetEnv() const noexcept { return _env; }
     std::shared_ptr<ViewFactory> GetFactory() const noexcept { return _factory; }
 
-    flow::Event<ImGuiIO&, Config&> LoadFonts    = [](auto, auto) {};
-    flow::Event<ImGuiStyle&, Style&> SetupStyle = [](auto, auto) {};
+    flow::Event<Config&> LoadFonts = [](auto) {};
+    flow::Event<Style&> SetupStyle = [](auto) {};
 
     flow::EventDispatcher<const std::shared_ptr<Graph>&> OnActiveGraphChanged;
 
@@ -81,8 +80,6 @@ class Editor
 
     std::vector<std::shared_ptr<Window>> _windows;
     std::unordered_map<flow::UUID, std::shared_ptr<GraphWindow>> _graph_windows;
-
-    HelloImGui::RunnerParams _params;
 };
 
 FLOW_UI_NAMESPACE_END

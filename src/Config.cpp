@@ -6,6 +6,7 @@
 #include <cstdint>
 
 FLOW_UI_NAMESPACE_START
+
 static Config config{
     .DefaultFont    = nullptr,
     .IconFont       = nullptr,

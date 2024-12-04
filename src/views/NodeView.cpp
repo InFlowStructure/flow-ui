@@ -262,7 +262,7 @@ void CommentView::Draw()
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.f, 0.f));
         ImGui::BeginHorizontal("horizontal");
         {
-            ImGui::PushFont(GetStyle().NodeHeaderFont);
+            ImGui::PushFont(GetConfig().NodeHeaderFont);
             ImGui::Dummy(ImVec2(5.f, 0));
 
             if (_edit)

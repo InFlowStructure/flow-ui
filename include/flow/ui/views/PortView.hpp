@@ -56,7 +56,7 @@ class PortView
     std::string_view Name() const noexcept { return _port->GetVarName(); }
     std::string_view Caption() const noexcept { return _port->GetCaption(); }
     std::string_view Type() const noexcept { return _port->GetDataType(); }
-    ImColor Colour() const noexcept { return GetStyle().GetPortColour(Type()); }
+    Colour Colour() const noexcept { return GetStyle().GetTypeColour(Type()); }
 
     void SetBuilder(std::shared_ptr<NodeBuilder> builder) noexcept { _builder = std::move(builder); }
 
