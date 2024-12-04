@@ -38,7 +38,7 @@ IconType GetIconType(std::string_view type)
 
 void DrawPinIcon(const PortView& pin, bool connected, int alpha)
 {
-    auto colour = pin.Colour();
+    auto colour = pin.GetColour();
     colour.A    = alpha;
     widgets::Icon(ImVec2(24.f, 24.f), GetIconType(pin.Type()), connected, utility::to_ImColor(colour),
                   ImColor(32, 32, 32, alpha));

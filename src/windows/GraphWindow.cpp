@@ -461,7 +461,7 @@ void GraphWindow::CreateItems()
                         _graph->ConnectNodes(start_node->ID(), start_pin->Name(), end_node->ID(), end_pin->Name());
 
                     _links.emplace(std::hash<flow::UUID>{}(conn->ID()),
-                                   Link{conn->ID(), start_pin->ID, end_pin->ID, start_pin->Colour()});
+                                   Link{conn->ID(), start_pin->ID, end_pin->ID, start_pin->GetColour()});
                 }
             }
         }
@@ -621,7 +621,7 @@ void GraphWindow::OnLoadConnection(const flow::SharedConnection& connection)
                                   [&](auto&& pin) { return pin->Name() == connection->EndPortKey(); });
 
     _links.emplace(std::hash<flow::UUID>{}(connection->ID()),
-                   Link{connection->ID(), (*start_pin)->ID, (*end_pin)->ID, (*start_pin)->Colour()});
+                   Link{connection->ID(), (*start_pin)->ID, (*end_pin)->ID, (*start_pin)->GetColour()});
 }
 
 ed::Detail::EditorContext* GraphWindow::GetEditorDetailContext() const
@@ -689,7 +689,7 @@ void GraphWindow::DrawPopupCategory(const std::string& category, const flow::Cat
                         _graph->ConnectNodes(start_node->ID(), start_pin->Name(), end_node->ID(), end_pin->Name());
 
                     _links.emplace(std::hash<flow::UUID>{}(conn->ID()),
-                                   Link{conn->ID(), start_pin->ID, end_pin->ID, start_pin->Colour()});
+                                   Link{conn->ID(), start_pin->ID, end_pin->ID, start_pin->GetColour()});
                     break;
                 }
             }
@@ -872,7 +872,7 @@ void GraphWindow::CreateNodesAction(const json& SPDLOG_json)
                                       [&](auto&& pin) { return pin->Name() == connection->EndPortKey(); });
 
         _links.emplace(std::hash<flow::UUID>{}(connection->ID()),
-                       Link{connection->ID(), (*start_pin)->ID, (*end_pin)->ID, (*start_pin)->Colour()});
+                       Link{connection->ID(), (*start_pin)->ID, (*end_pin)->ID, (*start_pin)->GetColour()});
     };
 
     new_diff.get_to(*_graph);
