@@ -106,125 +106,125 @@ constexpr Style::NodeEditorColours to_NodeEditorColours(const ed::StyleColor& c)
     return Style::NodeEditorColours(0);
 }
 
-constexpr ImGuiCol_ to_ImGuiCol(const Style::BaseColours& c)
+constexpr ImGuiCol_ to_ImGuiCol(const Style::BaseColour& c)
 {
     switch (c)
     {
-    case Style::BaseColours::Border:
+    case Style::BaseColour::Border:
         return ImGuiCol_Border;
-    case Style::BaseColours::BorderShadow:
+    case Style::BaseColour::BorderShadow:
         return ImGuiCol_BorderShadow;
-    case Style::BaseColours::Button:
+    case Style::BaseColour::Button:
         return ImGuiCol_Button;
-    case Style::BaseColours::ButtonActive:
+    case Style::BaseColour::ButtonActive:
         return ImGuiCol_ButtonActive;
-    case Style::BaseColours::ButtonHovered:
+    case Style::BaseColour::ButtonHovered:
         return ImGuiCol_ButtonHovered;
-    case Style::BaseColours::CheckMark:
+    case Style::BaseColour::CheckMark:
         return ImGuiCol_CheckMark;
-    case Style::BaseColours::ChildBg:
+    case Style::BaseColour::ChildBg:
         return ImGuiCol_ChildBg;
-    case Style::BaseColours::DockingEmptyBg:
+    case Style::BaseColour::DockingEmptyBg:
         return ImGuiCol_DockingEmptyBg;
-    case Style::BaseColours::DockingPreview:
+    case Style::BaseColour::DockingPreview:
         return ImGuiCol_DockingPreview;
-    case Style::BaseColours::DragDropTarget:
+    case Style::BaseColour::DragDropTarget:
         return ImGuiCol_DragDropTarget;
-    case Style::BaseColours::FrameBg:
+    case Style::BaseColour::FrameBg:
         return ImGuiCol_FrameBg;
-    case Style::BaseColours::FrameBgActive:
+    case Style::BaseColour::FrameBgActive:
         return ImGuiCol_FrameBgActive;
-    case Style::BaseColours::FrameBgHovered:
+    case Style::BaseColour::FrameBgHovered:
         return ImGuiCol_FrameBgHovered;
-    case Style::BaseColours::Header:
+    case Style::BaseColour::Header:
         return ImGuiCol_Header;
-    case Style::BaseColours::HeaderActive:
+    case Style::BaseColour::HeaderActive:
         return ImGuiCol_HeaderActive;
-    case Style::BaseColours::HeaderHovered:
+    case Style::BaseColour::HeaderHovered:
         return ImGuiCol_HeaderHovered;
-    case Style::BaseColours::MenuBarBg:
+    case Style::BaseColour::MenuBarBg:
         return ImGuiCol_MenuBarBg;
-    case Style::BaseColours::ModalWindowDimBg:
+    case Style::BaseColour::ModalWindowDimBg:
         return ImGuiCol_ModalWindowDimBg;
-    case Style::BaseColours::NavCursor:
+    case Style::BaseColour::NavCursor:
         return ImGuiCol_NavCursor;
-    case Style::BaseColours::NavWindowingDimBg:
+    case Style::BaseColour::NavWindowingDimBg:
         return ImGuiCol_NavWindowingDimBg;
-    case Style::BaseColours::NavWindowingHighlight:
+    case Style::BaseColour::NavWindowingHighlight:
         return ImGuiCol_NavWindowingHighlight;
-    case Style::BaseColours::PlotHistogram:
+    case Style::BaseColour::PlotHistogram:
         return ImGuiCol_PlotHistogram;
-    case Style::BaseColours::PlotHistogramHovered:
+    case Style::BaseColour::PlotHistogramHovered:
         return ImGuiCol_PlotHistogramHovered;
-    case Style::BaseColours::PlotLines:
+    case Style::BaseColour::PlotLines:
         return ImGuiCol_PlotLines;
-    case Style::BaseColours::PlotLinesHovered:
+    case Style::BaseColour::PlotLinesHovered:
         return ImGuiCol_PlotLinesHovered;
-    case Style::BaseColours::PopupBg:
+    case Style::BaseColour::PopupBg:
         return ImGuiCol_PopupBg;
-    case Style::BaseColours::ResizeGrip:
+    case Style::BaseColour::ResizeGrip:
         return ImGuiCol_ResizeGrip;
-    case Style::BaseColours::ResizeGripActive:
+    case Style::BaseColour::ResizeGripActive:
         return ImGuiCol_ResizeGripActive;
-    case Style::BaseColours::ResizeGripHovered:
+    case Style::BaseColour::ResizeGripHovered:
         return ImGuiCol_ResizeGripHovered;
-    case Style::BaseColours::ScrollbarBg:
+    case Style::BaseColour::ScrollbarBg:
         return ImGuiCol_ScrollbarBg;
-    case Style::BaseColours::ScrollbarGrab:
+    case Style::BaseColour::ScrollbarGrab:
         return ImGuiCol_ScrollbarGrab;
-    case Style::BaseColours::ScrollbarGrabActive:
+    case Style::BaseColour::ScrollbarGrabActive:
         return ImGuiCol_ScrollbarGrabActive;
-    case Style::BaseColours::ScrollbarGrabHovered:
+    case Style::BaseColour::ScrollbarGrabHovered:
         return ImGuiCol_ScrollbarGrabHovered;
-    case Style::BaseColours::Separator:
+    case Style::BaseColour::Separator:
         return ImGuiCol_Separator;
-    case Style::BaseColours::SeparatorActive:
+    case Style::BaseColour::SeparatorActive:
         return ImGuiCol_SeparatorActive;
-    case Style::BaseColours::SeparatorHovered:
+    case Style::BaseColour::SeparatorHovered:
         return ImGuiCol_SeparatorHovered;
-    case Style::BaseColours::SliderGrab:
+    case Style::BaseColour::SliderGrab:
         return ImGuiCol_SliderGrab;
-    case Style::BaseColours::SliderGrabActive:
+    case Style::BaseColour::SliderGrabActive:
         return ImGuiCol_SliderGrabActive;
-    case Style::BaseColours::Tab:
+    case Style::BaseColour::Tab:
         return ImGuiCol_Tab;
-    case Style::BaseColours::TabDimmed:
+    case Style::BaseColour::TabDimmed:
         return ImGuiCol_TabDimmed;
-    case Style::BaseColours::TabDimmedSelected:
+    case Style::BaseColour::TabDimmedSelected:
         return ImGuiCol_TabDimmedSelected;
-    case Style::BaseColours::TabDimmedSelectedOverline:
+    case Style::BaseColour::TabDimmedSelectedOverline:
         return ImGuiCol_TabDimmedSelectedOverline;
-    case Style::BaseColours::TabHovered:
+    case Style::BaseColour::TabHovered:
         return ImGuiCol_TabHovered;
-    case Style::BaseColours::TableBorderLight:
+    case Style::BaseColour::TableBorderLight:
         return ImGuiCol_TableBorderLight;
-    case Style::BaseColours::TableBorderStrong:
+    case Style::BaseColour::TableBorderStrong:
         return ImGuiCol_TableBorderStrong;
-    case Style::BaseColours::TableHeaderBg:
+    case Style::BaseColour::TableHeaderBg:
         return ImGuiCol_TableHeaderBg;
-    case Style::BaseColours::TableRowBg:
+    case Style::BaseColour::TableRowBg:
         return ImGuiCol_TableRowBg;
-    case Style::BaseColours::TableRowBgAlt:
+    case Style::BaseColour::TableRowBgAlt:
         return ImGuiCol_TableRowBgAlt;
-    case Style::BaseColours::TabSelected:
+    case Style::BaseColour::TabSelected:
         return ImGuiCol_TabSelected;
-    case Style::BaseColours::TabSelectedOverline:
+    case Style::BaseColour::TabSelectedOverline:
         return ImGuiCol_TabSelectedOverline;
-    case Style::BaseColours::Text:
+    case Style::BaseColour::Text:
         return ImGuiCol_Text;
-    case Style::BaseColours::TextDisabled:
+    case Style::BaseColour::TextDisabled:
         return ImGuiCol_TextDisabled;
-    case Style::BaseColours::TextLink:
+    case Style::BaseColour::TextLink:
         return ImGuiCol_TextLink;
-    case Style::BaseColours::TextSelectedBg:
+    case Style::BaseColour::TextSelectedBg:
         return ImGuiCol_TextSelectedBg;
-    case Style::BaseColours::TitleBg:
+    case Style::BaseColour::TitleBg:
         return ImGuiCol_TitleBg;
-    case Style::BaseColours::TitleBgActive:
+    case Style::BaseColour::TitleBgActive:
         return ImGuiCol_TitleBgActive;
-    case Style::BaseColours::TitleBgCollapsed:
+    case Style::BaseColour::TitleBgCollapsed:
         return ImGuiCol_TitleBgCollapsed;
-    case Style::BaseColours::WindowBg:
+    case Style::BaseColour::WindowBg:
         return ImGuiCol_WindowBg;
     }
 

@@ -33,7 +33,7 @@ struct Colour
 struct Style
 {
   public:
-    enum class BaseColours : std::uint8_t
+    enum class BaseColour : std::uint8_t
     {
         Border,
         BorderShadow,
@@ -145,7 +145,7 @@ struct Style
 
     struct
     {
-        std::map<BaseColours, Colour> BaseColours;
+        std::map<BaseColour, Colour> BaseColours;
         std::map<NodeEditorColours, Colour> NodeEdtiorColours;
         std::unordered_map<std::string_view, Colour> TypeColours;
     } Colours;

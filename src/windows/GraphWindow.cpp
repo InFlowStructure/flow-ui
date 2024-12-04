@@ -768,7 +768,7 @@ void GraphWindow::LoadFlow(const json& j)
     for (const auto& comment_json : comments_json)
     {
         auto comment   = std::make_shared<CommentView>(ImVec2(comment_json["size"]),
-                                                       comment_json["comment"].get_ref<const std::string&>());
+                                                     comment_json["comment"].get_ref<const std::string&>());
         auto [view, _] = _item_views.emplace(comment->ID(), std::move(comment));
         ed::SetNodePosition(view->second->ID(), comment_json["position"]);
     }
