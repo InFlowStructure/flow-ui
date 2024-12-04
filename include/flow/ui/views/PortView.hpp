@@ -9,7 +9,7 @@
 #include "flow/ui/utilities/Widgets.hpp"
 
 #include <flow/core/Node.hpp>
-#include <imgui-node-editor/imgui_node_editor.h>
+#include <imgui_node_editor.h>
 
 #include <memory>
 #include <string_view>

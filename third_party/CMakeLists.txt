@@ -3,21 +3,16 @@ if (NOT flow-ui_USE_EXTERNAL_FLOW_CORE)
     add_subdirectory(flow-core)
 endif()
 
-set(IMGUI_BUNDLE_BUILD_PYTHON OFF CACHE BOOL "")
-set(IMGUI_BUNDLE_DISABLE_IMFILEDIALOG ON CACHE BOOL "")
-set(IMGUI_BUNDLE_DISABLE_IMGUIZMO ON CACHE BOOL "")
-set(IMGUI_BUNDLE_DISABLE_NANOVG ON CACHE BOOL "")
-set(IMGUI_BUNDLE_DISABLE_IMMVISION ON CACHE BOOL "")
-set(IMGUI_BUNDLE_WITH_IMMVISION OFF CACHE BOOL "")
-set(IMGUI_BUNDLE_WITH_TEST_ENGINE OFF CACHE BOOL "")
-set(IMGUI_BUNDLE_WITH_IMFILEDIALOG OFF CACHE BOOL "")
-set(IMGUI_BUNDLE_WITH_IMGUI_NODE_EDITOR ON CACHE BOOL "")
-set(IMGUI_BUNDLE_WITH_TEXT_INSPECT ON CACHE BOOL "")
-
 set(HELLOIMGUI_DOWNLOAD_FREETYPE_IF_NEEDED OFF CACHE BOOL "")
 set(HELLOIMGUI_USE_FREETYPE OFF CACHE BOOL "")
 
-add_subdirectory(imgui_bundle)
+include(add_libs)
+include(hello_imgui/hello_imgui_cmake/hello_imgui_add_app.cmake)
+include(hello_imgui/hello_imgui_cmake/msvc/msvc_target_group.cmake)
+
+add_hello_imgui()
+add_simple_external_library_with_sources(imgui_node_editor ${CMAKE_CURRENT_SOURCE_DIR}/imgui-node-editor)
+
 add_subdirectory(nfd)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)

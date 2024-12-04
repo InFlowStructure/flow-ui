@@ -19,11 +19,10 @@ struct DefaultDockspaces
 class Window
 {
   public:
-    Window(std::string name, std::string dockspace_name);
+    Window(std::string name);
     virtual ~Window() = default;
 
     const std::string& GetName() const { return _name; }
-    const std::string& GetDockspaceName() const { return _dockspace_name; }
 
     virtual void Init() {}
     virtual void Teardown() {}
@@ -31,7 +30,6 @@ class Window
 
   protected:
     std::string _name;
-    std::string _dockspace_name;
 };
 
 FLOW_UI_NAMESPACE_END

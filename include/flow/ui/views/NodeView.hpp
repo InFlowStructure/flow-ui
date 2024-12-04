@@ -6,24 +6,20 @@
 #include "LinkView.hpp"
 #include "flow/ui/Core.hpp"
 #include "flow/ui/utilities/Builders.hpp"
+#include "flow/ui/utilities/Helpers.hpp"
 
 #include <flow/core/Node.hpp>
-#include <imgui-node-editor/imgui_node_editor.h>
+#include <imgui_node_editor.h>
 
 #include <deque>
 #include <set>
 #include <string_view>
 #include <type_traits>
 
+FLOW_UI_NAMESPACE_START
+
 namespace ed = ax::NodeEditor;
 
-template<>
-struct std::less<ed::PinId>
-{
-    bool operator()(const ed::PinId& lhs, const ed::PinId& rhs) const { return lhs.AsPointer() < rhs.AsPointer(); }
-};
-
-FLOW_UI_NAMESPACE_START
 class Link;
 class PortView;
 
@@ -34,7 +30,8 @@ class GraphItemView
     virtual ~GraphItemView();
 
     virtual void Draw() = 0;
-    virtual void ShowLinkablePorts(const std::shared_ptr<PortView>&) {}
+
+    virtual void ShowLinkables(const std::shared_ptr<PortView>&) {}
 
     const ed::NodeId& ID() const { return _id; }
 
@@ -50,7 +47,7 @@ class NodeView : public GraphItemView
 
     void Draw() override;
 
-    void ShowLinkablePorts(const std::shared_ptr<PortView>& new_link_port) override;
+    void ShowLinkables(const std::shared_ptr<PortView>& new_link_port) override;
 
   public:
     std::string Name;

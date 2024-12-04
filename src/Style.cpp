@@ -13,7 +13,7 @@ Style::Style()
         .Default = widgets::IconType::Circle,
         .Ref     = widgets::IconType::Diamond,
     },
-    PortColours{
+    Colours{.PortColours{
         {std::string{TypeName_v<std::any>}, ImColor(120, 120, 127)},
 
         {std::string{"flow::Nodes::ReflectType"}, ImColor(6, 68, 154)},
@@ -35,24 +35,28 @@ Style::Style()
 
         {std::string{TypeName_v<std::string>}, ImColor(124, 21, 153)},
     }
+    }
 {
-    std::copy_n(ed::Style{}.Colors, ed::StyleColor_Count, Colours);
+    std::copy_n(ed::Style{}.Colors, ed::StyleColor_Count, std::begin(Colours.NodeEdtiorColours));
 }
 
 static Style style{};
 
 Style& GetStyle() { return style; }
 
-void Style::SetPortColour(std::string_view type, ImVec4 colour) { PortColours[std::string{type}] = std::move(colour); }
+void Style::SetPortColour(std::string_view type, ImVec4 colour)
+{
+    Colours.PortColours[std::string{type}] = std::move(colour);
+}
 
 ImColor Style::GetPortColour(std::string_view type) const
 {
-    if (PortColours.contains(std::string{type}))
+    if (Colours.PortColours.contains(std::string{type}))
     {
-        return PortColours.at(std::string{type});
+        return Colours.PortColours.at(std::string{type});
     }
 
-    for (const auto& [port_type, colour] : PortColours)
+    for (const auto& [port_type, colour] : Colours.PortColours)
     {
         if (type.find(port_type) != std::string_view::npos)
         {

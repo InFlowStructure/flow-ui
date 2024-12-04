@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include <imgui-node-editor/imgui_node_editor.h>
+#include <imgui_node_editor.h>
 
 #include <functional>
 
@@ -25,6 +25,15 @@ template<>
 struct std::less<ax::NodeEditor::LinkId>
 {
     bool operator()(const ax::NodeEditor::LinkId& lhs, const ax::NodeEditor::LinkId& rhs) const
+    {
+        return lhs.AsPointer() < rhs.AsPointer();
+    }
+};
+
+template<>
+struct std::less<ax::NodeEditor::PinId>
+{
+    bool operator()(const ax::NodeEditor::PinId& lhs, const ax::NodeEditor::PinId& rhs) const
     {
         return lhs.AsPointer() < rhs.AsPointer();
     }

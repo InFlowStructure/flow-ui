@@ -7,9 +7,10 @@
 #include "utilities/Widgets.hpp"
 
 #include <flow/core/TypeName.hpp>
-#include <imgui-node-editor/imgui_node_editor.h>
 #include <imgui.h>
+#include <imgui_node_editor.h>
 
+#include <array>
 #include <string>
 #include <unordered_map>
 
@@ -20,15 +21,8 @@ namespace ed = ax::NodeEditor;
 
 struct Style
 {
+  public:
     Style();
-
-    struct
-    {
-        widgets::IconType Default;
-        widgets::IconType Ref;
-    } PortShapes;
-
-    std::unordered_map<std::string, ImVec4> PortColours;
 
     void SetPortColour(std::string_view type, ImVec4 colour);
     ImColor GetPortColour(std::string_view type) const;
@@ -45,9 +39,20 @@ struct Style
         return GetPortColour(flow::TypeName_v<T>);
     }
 
-    ImFont* NodeHeaderFont = nullptr;
+  public:
+    struct
+    {
+        widgets::IconType Default;
+        widgets::IconType Ref;
+    } PortShapes;
 
-    ImVec4 Colours[ed::StyleColor_Count];
+    struct
+    {
+        std::array<ImVec4, ed::StyleColor_Count> NodeEdtiorColours;
+        std::unordered_map<std::string, ImVec4> PortColours;
+    } Colours;
+
+    ImFont* NodeHeaderFont = nullptr;
 };
 
 Style& GetStyle();

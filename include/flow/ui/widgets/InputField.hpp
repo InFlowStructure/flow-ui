@@ -30,8 +30,6 @@ class Input : public InputInterface
 
     flow::SharedNodeData Draw() override
     {
-        ImGui::SameLine();
-
         ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(36, 36, 36, 255));
         if (InputField<typename std::remove_cvref_t<T>>(_name, _value, _flags))
         {

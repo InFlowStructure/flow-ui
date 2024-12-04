@@ -52,8 +52,7 @@ PortView::PortView(const ed::NodeId& node_id, std::shared_ptr<Port> port_data,
     if (input_ctors.contains(std::string{Type()}))
     {
         _input_field = input_ctors.at(std::string{Type()})(std::string{Name()}, _port->GetData(),
-                                                           ImGuiInputTextFlags_AutoSelectAll |
-                                                               ImGuiInputTextFlags_EnterReturnsTrue);
+                                                           ImGuiInputTextFlags_AutoSelectAll);
     }
 }
 

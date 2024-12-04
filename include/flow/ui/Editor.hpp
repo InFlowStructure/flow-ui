@@ -12,12 +12,11 @@
 #include "views/NodeView.hpp"
 #include "views/PortView.hpp"
 #include "windows/GraphWindow.hpp"
-#include "windows/PropertyWindow.hpp"
 
 #include <flow/core/Env.hpp>
 #include <flow/core/Event.hpp>
 #include <hello_imgui/hello_imgui.h>
-#include <imgui-node-editor/imgui_node_editor.h>
+#include <imgui_node_editor.h>
 
 #include <deque>
 #include <map>
@@ -30,6 +29,14 @@ namespace ed = ax::NodeEditor;
 
 FLOW_UI_NAMESPACE_START
 
+enum class DockspaceSplitDirection
+{
+    Up    = ImGuiDir_Up,
+    Down  = ImGuiDir_Down,
+    Left  = ImGuiDir_Left,
+    Right = ImGuiDir_Right,
+};
+
 class Editor
 {
   public:
@@ -37,8 +44,17 @@ class Editor
 
     void Run();
 
+    void AddWindow(std::shared_ptr<Window> new_window, const std::string& dockspace);
+    void AddDockspace(std::string name, std::string initial_dockspace_name, float ratio,
+                      DockspaceSplitDirection direction);
+
+    std::shared_ptr<Env> GetEnv() const noexcept { return _env; }
+    std::shared_ptr<ViewFactory> GetFactory() const noexcept { return _factory; }
+
     flow::Event<ImGuiIO&, Config&> LoadFonts    = [](auto, auto) {};
     flow::Event<ImGuiStyle&, Style&> SetupStyle = [](auto, auto) {};
+
+    flow::EventDispatcher<const std::shared_ptr<Graph>&> OnActiveGraphChanged;
 
   protected:
     void Init(const std::string& initial_file);
@@ -48,20 +64,11 @@ class Editor
 
     void DrawMainMenuBar();
 
-    std::vector<HelloImGui::DockingSplit> SplitDockSpace() const;
-    std::vector<HelloImGui::DockableWindow> BuildDockableWindows();
-
-    auto& GetGraphWindows() { return _graph_windows; }
-
-    bool ShouldReloadWindows() const { return _reload_windows; }
-    void SetShouldReloadWindows(bool value) { _reload_windows = value; }
-
     std::shared_ptr<GraphWindow>& CreateFlow(std::string name);
     void LoadFlow(std::string file = "");
     void SaveFlow(bool save_as);
 
-  private:
-    void SetPropertyWindowGraph(std::shared_ptr<flow::Graph> graph);
+    std::vector<HelloImGui::DockableWindow>::iterator GetDockableGraphWindowBegin() noexcept;
 
   private:
     FileStorage _filestorage{
@@ -72,13 +79,10 @@ class Editor
     std::shared_ptr<ViewFactory> _factory = std::make_shared<ViewFactory>();
     std::shared_ptr<Env> _env             = Env::Create(_factory);
 
-    std::vector<std::unique_ptr<flow::ui::Window>> _windows;
+    std::vector<std::shared_ptr<Window>> _windows;
     std::unordered_map<flow::UUID, std::shared_ptr<GraphWindow>> _graph_windows;
 
     HelloImGui::RunnerParams _params;
-
-    bool _init           = false;
-    bool _reload_windows = true;
 };
 
 FLOW_UI_NAMESPACE_END

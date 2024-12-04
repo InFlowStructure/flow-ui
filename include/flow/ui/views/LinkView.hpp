@@ -6,7 +6,7 @@
 #include "flow/ui/Core.hpp"
 
 #include <flow/core/UUID.hpp>
-#include <imgui-node-editor/imgui_node_editor.h>
+#include <imgui_node_editor.h>
 
 #include <mutex>
 

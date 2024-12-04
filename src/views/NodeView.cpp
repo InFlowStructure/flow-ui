@@ -152,7 +152,7 @@ catch (const std::exception& e)
     SPDLOG_ERROR("Encounter and error while trying to draw node: {0}", e.what());
 }
 
-void NodeView::ShowLinkablePorts(const std::shared_ptr<PortView>& new_link_pin)
+void NodeView::ShowLinkables(const std::shared_ptr<PortView>& new_link_pin)
 {
     for (auto& port : Inputs)
     {
@@ -268,8 +268,8 @@ void CommentView::Draw()
             if (_edit)
             {
                 ImGui::PushItemWidth(std::min(Size.x, ImGui::CalcTextSize(Name.c_str()).x));
-                if (widgets::InputText("", &Name,
-                                       ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
+                if (ImGui::InputText("", &Name,
+                                     ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
                 {
                     _edit = false;
                 }

@@ -11,6 +11,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(APPLE)
   enable_language(OBJC)
+elseif(MSVC)
+  add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 endif()
 
 # -----------------------------------------------------------------------------
@@ -22,6 +24,8 @@ option(flow-ui_USE_EXTERNAL_FLOW_CORE "Use an external Flow Core library" OFF)
 # -----------------------------------------------------------------------------
 # Dependencies
 # -----------------------------------------------------------------------------
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 find_package(nlohmann_json CONFIG QUIET)
 if (NOT nlohmann_json_FOUND)
@@ -38,8 +42,11 @@ if (flow-ui_USE_EXTERNAL_FLOW_CORE)
 endif()
 
 if(flow-ui_INSTALL)
-  set(IMGUI_BUNDLE_INSTALL_CPP ON CACHE BOOL "" FORCE)
+  if (NOT flow-ui_USE_EXTERNAL_FLOW_CORE)
+    set(flow-core_INSTALL ON CACHE BOOL "" FORCE)
+  endif()
   set(SPDLOG_INSTALL ON CACHE BOOL "" FORCE)
+  set(NFD_INSTALL ON CACHE BOOL "" FORCE)
 endif()
 
 add_subdirectory(third_party)
@@ -81,9 +88,6 @@ add_library(${PROJECT_NAME} SHARED
 
   # Window source files
   src/windows/GraphWindow.cpp
-  src/windows/ImageInspectorWindow.cpp
-  src/windows/LogWindow.cpp
-  src/windows/PropertyWindow.cpp
 
   # Utility files
   src/utilities/Builders.cpp
@@ -116,63 +120,45 @@ target_link_libraries(${PROJECT_NAME}
   flow-core::flow-core
   nlohmann_json::nlohmann_json
   spdlog::spdlog
-  imgui_bundle
+  imgui
+  hello_imgui
+  imgui_node_editor
   nfd
 )
 target_compile_definitions(${PROJECT_NAME} PUBLIC IMGUI_DEFINE_MATH_OPERATORS)
-
-if(MSVC)
-  add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_RUNTIME_DLLS:${PROJECT_NAME}>
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>
-  )
-endif()
 
 # -----------------------------------------------------------------------------
 # Install
 # -----------------------------------------------------------------------------
 
-# TODO: Figure out how to do this nicely with these dependencies.
-# if(flow-ui_INSTALL)
-#   set(export_destination "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
-#   set(export_targets
-#     ${PROJECT_NAME}
-#     ${IMGUI_BUNDLE_INSTALLABLE_DEPENDENCIES}
-#     spdlog
-#     nfd
-#   )
+if(flow-ui_INSTALL)
+  set(export_destination "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
 
-#   if (NOT flow-ui_USE_EXTERNAL_FLOW_CORE)
-#     list(APPEND export_targets flow-core)
-#     list(APPEND export_targets nlohmann_json)
-#   endif()
+  install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+  install(TARGETS ${PROJECT_NAME} imgui hello_imgui imgui_node_editor
+    EXPORT ${PROJECT_NAME}Targets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  )
 
-#   install(DIRECTORY include/ DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
-#   install(TARGETS ${export_targets}
-#     EXPORT ${PROJECT_NAME}
-#     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-#     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-#     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-#   )
+  install(EXPORT ${PROJECT_NAME}Targets
+    DESTINATION ${export_destination}
+    NAMESPACE ${PROJECT_NAME}::
+    FILE "${PROJECT_NAME}Targets.cmake")
 
-#   export(TARGETS ${export_targets}
-#     NAMESPACE ${PROJECT_NAME}::
-#     FILE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Targets.cmake"
-#   )
-#   install(EXPORT ${PROJECT_NAME} DESTINATION ${export_destination} NAMESPACE ${PROJECT_NAME}:: FILE "${PROJECT_NAME}Targets.cmake")
+  include(CMakePackageConfigHelpers)
+  configure_package_config_file(
+    "${CMAKE_CURRENT_LIST_DIR}/cmake/${PROJECT_NAME}Config.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+    INSTALL_DESTINATION ${export_destination}
+  )
 
-#   include(CMakePackageConfigHelpers)
-#   configure_package_config_file(
-#     "${CMAKE_CURRENT_LIST_DIR}/cmake/${PROJECT_NAME}Config.cmake.in"
-#     "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
-#     INSTALL_DESTINATION ${export_destination}
-#   )
+  install(
+    FILES "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+    DESTINATION ${export_destination}
+  )
 
-#   install(
-#     FILES "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
-#     DESTINATION ${export_destination}
-#   )
-
-#   write_basic_package_version_file(${PROJECT_NAME}ConfigVersion.cmake COMPATIBILITY SameMajorVersion)
-# endif()
+  write_basic_package_version_file(${PROJECT_NAME}ConfigVersion.cmake COMPATIBILITY SameMajorVersion)
+endif()

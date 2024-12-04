@@ -10,7 +10,7 @@
 
 #include <flow/core/Graph.hpp>
 #include <flow/core/NodeFactory.hpp>
-#include <imgui-node-editor/imgui_node_editor.h>
+#include <imgui_node_editor.h>
 
 #include <algorithm>
 #include <memory>

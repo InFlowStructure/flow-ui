@@ -12,12 +12,16 @@
 #include <flow/core/Env.hpp>
 #include <flow/core/NodeFactory.hpp>
 #include <hello_imgui/icons_font_awesome_6.h>
-#include <imgui-node-editor/imgui_node_editor_internal.h>
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <imgui_node_editor_internal.h>
 #include <spdlog/spdlog.h>
 
 #include <set>
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ImVec2, x, y);
+
+FLOW_UI_NAMESPACE_START
 
 namespace
 {
@@ -81,17 +85,12 @@ bool AcceptRedo()
 bool AcceptComment() { return ImGui::IsKeyChordPressed(ImGuiMod_Alt | ImGuiKey_C); }
 } // namespace
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ImVec2, x, y);
-
-FLOW_UI_NAMESPACE_START
-
 constexpr GraphWindow::ActionType operator&(const GraphWindow::ActionType& a, const GraphWindow::ActionType& b)
 {
     return static_cast<GraphWindow::ActionType>(static_cast<std::uint8_t>(a) & static_cast<std::uint8_t>(b));
 }
 
-GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph)
-    : Window(graph->GetName(), DefaultDockspaces::Main), _graph{std::move(graph)}
+GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph) : Window(graph->GetName()), _graph{std::move(graph)}
 {
     ed::Config config;
     config.UserPointer      = this;
@@ -128,8 +127,8 @@ GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph)
     ed_style.FlowDuration    = 1.f;
 
     auto& ed_colours = ed_style.Colors;
-    auto& colours    = GetStyle().Colours;
-    std::copy_n(colours, ed::StyleColor_Count, ed_colours);
+    auto& colours    = GetStyle().Colours.NodeEdtiorColours;
+    std::copy_n(std::begin(colours), ed::StyleColor_Count, ed_colours);
 
     _graph->Visit([](const auto& node) { return node->Start(); });
 }
@@ -179,7 +178,7 @@ try
 
     for (auto& [_, item] : _item_views)
     {
-        item->ShowLinkablePorts(_new_link_pin);
+        item->ShowLinkables(_new_link_pin);
         item->Draw();
     }
 
@@ -214,15 +213,15 @@ try
 
     if (ImGui::IsWindowFocused() && ed::AreShortcutsEnabled())
     {
-        if (::AcceptUndo())
+        if (AcceptUndo())
         {
             UndoChange();
         }
-        else if (::AcceptRedo())
+        else if (AcceptRedo())
         {
             RedoChange();
         }
-        else if (::AcceptComment())
+        else if (AcceptComment())
         {
             CreateComment();
         }
@@ -431,12 +430,12 @@ void GraphWindow::CreateItems()
             }
             else if (end_pin->Kind == start_pin->Kind)
             {
-                ::DrawLabel("x Incompatible Pin Kind", ImColor(45, 32, 32, 180));
+                DrawLabel("x Incompatible Pin Kind", ImColor(45, 32, 32, 180));
                 ed::RejectNewItem(ImColor(255, 0, 0), 2.0f);
             }
             else if (!GetEnv()->GetFactory()->IsConvertible(start_pin->Type(), end_pin->Type()))
             {
-                ::DrawLabel("x Incompatible Pin Type", ImColor(45, 32, 32, 180));
+                DrawLabel("x Incompatible Pin Type", ImColor(45, 32, 32, 180));
                 ed::RejectNewItem(ImColor(255, 128, 128), 1.0f);
             }
             else
@@ -448,7 +447,7 @@ void GraphWindow::CreateItems()
                     label = "+ Create Converting Link";
                 }
 
-                ::DrawLabel(label.c_str(), ImColor(32, 45, 32, 180));
+                DrawLabel(label.c_str(), ImColor(32, 45, 32, 180));
                 if (ed::AcceptNewItem(ImColor(128, 255, 128), 4.0f))
                 {
                     const auto& start_node = FindNode(start_pin->NodeID)->Node;
@@ -467,7 +466,10 @@ void GraphWindow::CreateItems()
     if (ed::QueryNewNode(&pinId))
     {
         _new_link_pin = FindPin(pinId);
-        if (_new_link_pin) ::DrawLabel("+ Create Node", ImColor(32, 45, 32, 180));
+        if (_new_link_pin)
+        {
+            DrawLabel("+ Create Node", ImColor(32, 45, 32, 180));
+        }
 
         if (ed::AcceptNewItem())
         {
@@ -530,7 +532,7 @@ void GraphWindow::ShowNodeContextMenu()
     // ImGui::PushItemWidth(275);
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 20.f);
     ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(36, 36, 36, 255));
-    widgets::InputText("##Search", &node_lookup, 0);
+    ImGui::InputText("##Search", &node_lookup, 0);
     ImGui::PopStyleColor();
     ImGui::PopStyleVar();
     // ImGui::PopItemWidth();

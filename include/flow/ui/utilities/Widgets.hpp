@@ -44,47 +44,16 @@ static inline void TextCentered(const std::string& text)
     ImGui::TextUnformatted(text.c_str());
 }
 
-struct InputTextCallback_UserData
-{
-    std::string* Str;
-};
-
-static inline int InputTextCallback(ImGuiInputTextCallbackData* data)
-{
-    InputTextCallback_UserData* user_data = (InputTextCallback_UserData*)data->UserData;
-    if (data->EventFlag == ImGuiInputTextFlags_CallbackResize)
-    {
-        // Resize string callback
-        // If for some reason we refuse the new length (BufTextLen) and/or capacity (BufSize) we need to set them back
-        // to what we want.
-        std::string* str = user_data->Str;
-        IM_ASSERT(data->Buf == str->c_str());
-        str->resize(data->BufTextLen);
-        data->Buf = (char*)str->c_str();
-    }
-    return 0;
-}
-
-static inline bool InputText(const char* label, std::string* str, ImGuiInputTextFlags flags)
-{
-    IM_ASSERT((flags & ImGuiInputTextFlags_CallbackResize) == 0);
-    flags |= ImGuiInputTextFlags_CallbackResize;
-
-    InputTextCallback_UserData cb_user_data;
-    cb_user_data.Str = str;
-    return ImGui::InputText(label, (char*)str->c_str(), str->capacity() + 1, flags, InputTextCallback, &cb_user_data);
-}
-
 template<std::integral T>
 static inline bool InputInteger(ImGuiDataType type, std::string_view name, T& value, ImGuiInputTextFlags flags)
 {
     ImGui::PushItemWidth(50.0f);
 
-    bool result = ImGui::InputScalar(("##" + std::string{name}).c_str(), type, &value, 0, 0, "%d", flags);
+    ImGui::InputScalar(("##" + std::string{name}).c_str(), type, &value, 0, 0, "%d", flags);
 
     ImGui::PopItemWidth();
 
-    return result;
+    return ImGui::IsItemDeactivatedAfterEdit();
 }
 
 template<concepts::Duration D>
@@ -93,12 +62,11 @@ static inline bool InputChrono(std::string_view name, D& value, ImGuiInputTextFl
     ImGui::PushItemWidth(100.0f);
 
     const D step{1};
-    bool result =
-        ImGui::InputScalar(("##" + std::string{name}).c_str(), ImGuiDataType_S64, &value, &step, 0, "%d", flags);
+    ImGui::InputScalar(("##" + std::string{name}).c_str(), ImGuiDataType_S64, &value, &step, 0, "%d", flags);
 
     ImGui::PopItemWidth();
 
-    return result;
+    return ImGui::IsItemDeactivatedAfterEdit();
 }
 
 template<typename T>
@@ -163,11 +131,11 @@ inline bool InputField<float>(std::string_view name, float& value, ImGuiInputTex
 {
     ImGui::PushItemWidth(50.0f);
 
-    bool result = ImGui::InputFloat(("##" + std::string{name}).c_str(), &value, 0, 0, "%.3f", flags);
+    ImGui::InputFloat(("##" + std::string{name}).c_str(), &value, 0, 0, "%.3f", flags);
 
     ImGui::PopItemWidth();
 
-    return result;
+    return ImGui::IsItemDeactivatedAfterEdit();
 }
 
 template<>
@@ -175,11 +143,11 @@ inline bool InputField<double>(std::string_view name, double& value, ImGuiInputT
 {
     ImGui::PushItemWidth(50.0f);
 
-    bool result = ImGui::InputDouble(("##" + std::string{name}).c_str(), &value, 0, 0, "%.3f", flags);
+    ImGui::InputDouble(("##" + std::string{name}).c_str(), &value, 0, 0, "%.3f", flags);
 
     ImGui::PopItemWidth();
 
-    return result;
+    return ImGui::IsItemDeactivatedAfterEdit();
 }
 
 template<>
@@ -187,11 +155,11 @@ inline bool InputField<std::string>(std::string_view name, std::string& value, I
 {
     ImGui::PushItemWidth(150.0f);
 
-    bool result = widgets::InputText(("##" + std::string{name}).c_str(), &value, flags);
+    ImGui::InputText(("##" + std::string{name}).c_str(), &value, flags);
 
     ImGui::PopItemWidth();
 
-    return result;
+    return ImGui::IsItemDeactivatedAfterEdit();
 }
 
 template<>

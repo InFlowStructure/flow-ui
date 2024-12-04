@@ -5,7 +5,7 @@
 
 #include "flow/ui/Core.hpp"
 
-#include <imgui-node-editor/imgui_node_editor.h>
+#include <imgui_node_editor.h>
 
 FLOW_UI_NAMESPACE_START
 
