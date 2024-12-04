@@ -65,7 +65,6 @@ void PortView::Draw()
         DrawIcon(_alpha);
         DrawLabel();
         ImGui::PopStyleVar();
-        _builder->EndPort();
 
         if (!IsLinked())
         {
@@ -84,6 +83,7 @@ void PortView::Draw()
             ed::EnableShortcuts(true);
             _was_active = false;
         }
+        _builder->EndPort();
     }
     else if (Kind == PinKind::Output)
     {
