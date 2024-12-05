@@ -22,12 +22,24 @@ struct PreviewNodeView : NodeView
     {
         _builder->Begin(this->ID());
 
-        auto input_it = std::find_if(Inputs.begin(), Inputs.end(), [](const auto& in) { return in->Name() == "in"; });
-        const auto& input = *input_it;
+        _builder->Header(Color);
+        ImGui::Spring(0);
 
-        input->Draw();
+        const auto& name = Node->GetName().c_str();
+        if (GetConfig().NodeHeaderFont)
+        {
+            ImGui::PushFont(GetConfig().NodeHeaderFont);
+            ImGui::TextUnformatted(name);
+            ImGui::PopFont();
+        }
+        else
+        {
+            ImGui::TextUnformatted(name);
+        }
 
-        _builder->Middle();
+        ImGui::Spring(1);
+        ImGui::Dummy(ImVec2(0, 28));
+        ImGui::Spring(0);
 
         if (GetConfig().IconFont)
         {
@@ -40,6 +52,16 @@ struct PreviewNodeView : NodeView
         {
             ImGui::PopFont();
         }
+
+        _builder->EndHeader();
+
+        auto input_it = std::find_if(Inputs.begin(), Inputs.end(), [](const auto& in) { return in->Name() == "in"; });
+        const auto& input = *input_it;
+        input->SetShowLabel(false);
+
+        input->Draw();
+
+        _builder->Middle();
 
         if (auto data = input->GetData())
         {
