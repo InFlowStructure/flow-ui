@@ -16,8 +16,8 @@ namespace ed = ax::NodeEditor;
 
 Style::Style()
     : PortShapes{
-        .Default = widgets::IconType::Circle,
-        .Ref     = widgets::IconType::Diamond,
+        .Default = IconType::Circle,
+        .Ref     = IconType::Diamond,
     },
     Colours{.TypeColours{
         {TypeName_v<std::any>, Colour(120, 120, 127)},
@@ -54,7 +54,7 @@ Style::Style()
 
     int i = 0;
     std::for_each(std::begin(ed_colours), std::end(ed_colours), [&](const auto& c) {
-        Colours.NodeEdtiorColours[utility::to_NodeEditorColours(ed::StyleColor(i++))] = utility::to_Colour(c);
+        Colours.EditorColours[utility::to_EditorColour(ed::StyleColor(i++))] = utility::to_Colour(c);
     });
 }
 

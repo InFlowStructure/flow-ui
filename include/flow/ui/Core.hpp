@@ -19,3 +19,9 @@
 #define FLOW_UI_SUBNAMESPACE_END                                                                                       \
     }                                                                                                                  \
     }
+
+FLOW_UI_NAMESPACE_START
+
+void* GetEditorContext() noexcept;
+
+FLOW_UI_NAMESPACE_END

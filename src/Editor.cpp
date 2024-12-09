@@ -6,7 +6,6 @@
 #include "Config.hpp"
 #include "EditorNodes.hpp"
 #include "ViewFactory.hpp"
-#include "Widgets.hpp"
 #include "Window.hpp"
 #include "utilities/Conversions.hpp"
 
@@ -238,6 +237,8 @@ void Editor::AddDockspace(std::string name, std::string initial_dockspace_name, 
 
     _params.dockingParams.dockingSplits.push_back(std::move(split));
 }
+
+void* Editor::GetContext() const noexcept { return reinterpret_cast<void*>(ImGui::GetCurrentContext()); }
 
 void Editor::HandleInput()
 {

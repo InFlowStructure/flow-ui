@@ -6,8 +6,8 @@
 #include "InputField.hpp"
 #include "LinkView.hpp"
 #include "ViewFactory.hpp"
-#include "Widgets.hpp"
 #include "utilities/Conversions.hpp"
+#include "utilities/Widgets.hpp"
 
 #include <flow/core/Env.hpp>
 #include <flow/core/NodeData.hpp>
@@ -20,7 +20,6 @@
 
 FLOW_UI_NAMESPACE_START
 
-using widgets::IconType;
 namespace
 {
 IconType GetIconType(std::string_view type)
@@ -39,7 +38,7 @@ IconType GetIconType(std::string_view type)
 void DrawPinIcon(const PortView& pin, bool connected, int alpha)
 {
     auto colour = pin.GetColour();
-    colour.A    = alpha;
+    colour.A    = static_cast<std::uint8_t>(alpha);
     widgets::Icon(ImVec2(24.f, 24.f), GetIconType(pin.Type()), connected, utility::to_ImColor(colour),
                   ImColor(32, 32, 32, alpha));
 }
@@ -53,8 +52,7 @@ PortView::PortView(const ed::NodeId& node_id, std::shared_ptr<Port> port_data,
     const auto& input_ctors = factory->GetRegisteredInputTypes();
     if (input_ctors.contains(std::string{Type()}))
     {
-        _input_field = input_ctors.at(std::string{Type()})(std::string{Name()}, _port->GetData(),
-                                                           ImGuiInputTextFlags_AutoSelectAll);
+        _input_field = input_ctors.at(std::string{Type()})(std::string{Name()}, _port->GetData());
     }
 }
 
@@ -62,7 +60,8 @@ void PortView::Draw()
 {
     if (Kind == PinKind::Input)
     {
-        _builder->Port(ID);
+        _builder->Input(ID);
+
         ImGui::PushStyleVar(ImGuiStyleVar_Alpha, _alpha);
         DrawIcon(_alpha);
         DrawLabel();
@@ -85,7 +84,8 @@ void PortView::Draw()
             ed::EnableShortcuts(true);
             _was_active = false;
         }
-        _builder->EndPort();
+
+        _builder->EndInput();
     }
     else if (Kind == PinKind::Output)
     {
@@ -118,7 +118,8 @@ try
 {
     if (!_input_field) return;
 
-    if (auto new_data = _input_field->Draw())
+    (*_input_field)();
+    if (auto new_data = _input_field->GetData())
     {
         OnSetInput(Key(), std::move(new_data));
     }

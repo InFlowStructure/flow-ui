@@ -22,8 +22,8 @@ class NodeBuilder
     void Header(const ImVec4& color = ImVec4(1, 1, 1, 1));
     void EndHeader();
 
-    void Port(ed::PinId id);
-    void EndPort();
+    void Input(ed::PinId id);
+    void EndInput();
 
     void Middle();
 

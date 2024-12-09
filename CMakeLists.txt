@@ -74,12 +74,13 @@ list(APPEND flow-ui_HEADERS
 add_library(${PROJECT_NAME} SHARED
   # Main source files
   src/Config.cpp
+  src/Core.cpp
+  src/Editor.cpp
+  src/FileStorage.cpp
   src/Style.cpp
   src/Texture.cpp
   src/ViewFactory.cpp
   src/Window.cpp
-  src/FileStorage.cpp
-  src/Editor.cpp
 
   # View source files
   src/views/LinkView.cpp
@@ -88,6 +89,12 @@ add_library(${PROJECT_NAME} SHARED
 
   # Window source files
   src/windows/GraphWindow.cpp
+
+  # Widget source files
+  src/widgets/InputField.cpp
+  src/widgets/PropertyTree.cpp
+  src/widgets/Table.cpp
+  src/widgets/Text.cpp
 
   # Utility files
   src/utilities/Builders.cpp

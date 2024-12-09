@@ -6,7 +6,6 @@
 #include "flow/ui/Core.hpp"
 #include "flow/ui/Style.hpp"
 #include "flow/ui/utilities/Builders.hpp"
-#include "flow/ui/utilities/Widgets.hpp"
 
 #include <flow/core/Node.hpp>
 #include <imgui_node_editor.h>
@@ -19,7 +18,7 @@ FLOW_UI_NAMESPACE_START
 namespace ed = ax::NodeEditor;
 namespace widgets
 {
-struct InputInterface;
+class InputInterface;
 }
 
 enum class PinKind

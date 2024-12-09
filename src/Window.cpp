@@ -3,6 +3,8 @@
 
 #include "Window.hpp"
 
+#include <imgui.h>
+
 FLOW_UI_NAMESPACE_START
 
 Window::Window(std::string name) : _name{std::move(name)} {}

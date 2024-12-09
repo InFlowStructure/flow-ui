@@ -7,13 +7,14 @@
 #include "LinkView.hpp"
 #include "PortView.hpp"
 #include "ViewFactory.hpp"
-#include "Widgets.hpp"
+#include "utilities/Widgets.hpp"
 
 #include <flow/core/Env.hpp>
 #include <flow/core/Port.hpp>
 
 #include <hello_imgui/icons_font_awesome_6.h>
 #include <imgui_internal.h>
+#include <imgui_stdlib.h>
 #include <spdlog/spdlog.h>
 
 #include <map>
@@ -349,7 +350,7 @@ namespace
 void DrawPinIcon(ImColor colour, bool connected, int alpha)
 {
     colour.Value.w = alpha / 255.0f;
-    widgets::Icon(ImVec2(24.f, 24.f), widgets::IconType::Circle, connected, colour, ImColor(32, 32, 32, alpha));
+    widgets::Icon(ImVec2(24.f, 24.f), IconType::Circle, connected, colour, ImColor(32, 32, 32, alpha));
 }
 } // namespace
 

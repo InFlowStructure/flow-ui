@@ -46,8 +46,7 @@ class ViewFactory : public flow::NodeFactory
     void RegisterInputType(const T& initial_value)
     {
         _input_field_contructors[std::string{flow::TypeName_v<T>}] =
-            [=](std::string name, const SharedNodeData& data,
-                ImGuiInputTextFlags flags) -> std::shared_ptr<widgets::InputInterface> {
+            [=](std::string name, const SharedNodeData& data) -> std::shared_ptr<widgets::InputInterface> {
             T value = initial_value;
             if (auto d = CastNodeData<T>(data))
             {
@@ -58,7 +57,7 @@ class ViewFactory : public flow::NodeFactory
                 value = ref_data->Get();
             }
 
-            return std::make_shared<widgets::Input<T>>(std::move(name), value, flags);
+            return std::make_shared<widgets::Input<T>>(std::move(name), value);
         };
     }
 
@@ -74,8 +73,8 @@ class ViewFactory : public flow::NodeFactory
   private:
     std::unordered_map<std::string, NodeViewConstructorCallback> _constructors;
 
-    using InputFieldConstructor_t = std::function<std::shared_ptr<widgets::InputInterface>(
-        std::string name, const SharedNodeData&, ImGuiInputTextFlags flags)>;
+    using InputFieldConstructor_t =
+        std::function<std::shared_ptr<widgets::InputInterface>(std::string name, const SharedNodeData&)>;
 
     std::unordered_map<std::string, InputFieldConstructor_t> _input_field_contructors;
 };

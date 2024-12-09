@@ -3,8 +3,6 @@
 
 #include "ViewFactory.hpp"
 
-#include "Widgets.hpp"
-
 #ifdef FLOW_WINDOWS
 #undef GetClassName
 #endif

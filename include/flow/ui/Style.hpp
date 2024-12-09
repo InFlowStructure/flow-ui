@@ -4,17 +4,26 @@
 #pragma once
 
 #include "Core.hpp"
-#include "utilities/Widgets.hpp"
 
 #include <flow/core/TypeName.hpp>
-#include <imgui.h>
 
 #include <array>
 #include <cstdint>
+#include <map>
 #include <string>
 #include <unordered_map>
 
 FLOW_UI_NAMESPACE_START
+
+enum class IconType : std::uint8_t
+{
+    Flow,
+    Circle,
+    Square,
+    Grid,
+    RoundSquare,
+    Diamond
+};
 
 struct Colour
 {
@@ -95,7 +104,7 @@ struct Style
         WindowBg,
     };
 
-    enum class NodeEditorColours : std::uint8_t
+    enum class EditorColour : std::uint8_t
     {
         Bg,
         Flow,
@@ -139,14 +148,14 @@ struct Style
   public:
     struct
     {
-        widgets::IconType Default;
-        widgets::IconType Ref;
+        IconType Default;
+        IconType Ref;
     } PortShapes;
 
     struct
     {
         std::map<BaseColour, Colour> BaseColours;
-        std::map<NodeEditorColours, Colour> NodeEdtiorColours;
+        std::map<EditorColour, Colour> EditorColours;
         std::unordered_map<std::string_view, Colour> TypeColours;
     } Colours;
 

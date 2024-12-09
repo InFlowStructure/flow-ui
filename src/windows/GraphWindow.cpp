@@ -7,7 +7,6 @@
 #include "NodeView.hpp"
 #include "PortView.hpp"
 #include "ViewFactory.hpp"
-#include "Widgets.hpp"
 #include "utilities/Conversions.hpp"
 
 #include <flow/core/Env.hpp>
@@ -16,6 +15,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <imgui_node_editor_internal.h>
+#include <imgui_stdlib.h>
 #include <spdlog/spdlog.h>
 
 #include <set>
@@ -128,7 +128,7 @@ GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph) : Window(graph->Get
     ed_style.FlowDuration    = 1.f;
 
     auto& ed_colours = ed_style.Colors;
-    auto& colours    = GetStyle().Colours.NodeEdtiorColours;
+    auto& colours    = GetStyle().Colours.EditorColours;
 
     std::for_each(std::begin(colours), std::end(colours), [&](const auto& p) {
         const auto& [i, c]                       = p;
@@ -534,19 +534,24 @@ void GraphWindow::ShowNodeContextMenu()
         is_focused = true;
     }
 
-    // ImGui::PushItemWidth(275);
+    ImGui::BeginHorizontal("search");
+
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 20.f);
     ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(36, 36, 36, 255));
+
+    ImGui::SetNextItemAllowOverlap();
     ImGui::InputText("##Search", &node_lookup, 0);
+
     ImGui::PopStyleColor();
     ImGui::PopStyleVar();
-    // ImGui::PopItemWidth();
 
-    // ImGui::SameLine();
+    ImGui::SetCursorPos({(ImGui::GetItemRectMax() - ImGui::GetItemRectMin()).x - 18, 4});
 
-    // ImGui::PushFont(GetConfig().IconFont);
-    // ImGui::TextUnformatted(ICON_FA_MAGNIFYING_GLASS);
-    // ImGui::PopFont();
+    ImGui::PushFont(GetConfig().IconFont);
+    ImGui::TextUnformatted(ICON_FA_MAGNIFYING_GLASS);
+    ImGui::PopFont();
+
+    ImGui::EndHorizontal();
 
     const auto factory    = GetEnv()->GetFactory();
     auto registered_nodes = factory->GetCategories();

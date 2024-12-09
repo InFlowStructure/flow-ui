@@ -11,99 +11,97 @@ FLOW_UI_SUBNAMESPACE_START(utility)
 using namespace ax;
 namespace ed = ax::NodeEditor;
 
-constexpr ed::StyleColor to_EdStyleColour(const Style::NodeEditorColours& c)
+constexpr ed::StyleColor to_EdStyleColour(const Style::EditorColour& c)
 {
     switch (c)
     {
-    case Style::NodeEditorColours::Bg:
+    case Style::EditorColour::Bg:
         return ed::StyleColor_Bg;
-    case Style::NodeEditorColours::Flow:
+    case Style::EditorColour::Flow:
         return ed::StyleColor_Flow;
-    case Style::NodeEditorColours::FlowMarker:
+    case Style::EditorColour::FlowMarker:
         return ed::StyleColor_FlowMarker;
-    case Style::NodeEditorColours::Grid:
+    case Style::EditorColour::Grid:
         return ed::StyleColor_Grid;
-    case Style::NodeEditorColours::GroupBg:
+    case Style::EditorColour::GroupBg:
         return ed::StyleColor_GroupBg;
-    case Style::NodeEditorColours::GroupBorder:
+    case Style::EditorColour::GroupBorder:
         return ed::StyleColor_GroupBorder;
-    case Style::NodeEditorColours::HighlightLinkBorder:
+    case Style::EditorColour::HighlightLinkBorder:
         return ed::StyleColor_HighlightLinkBorder;
-    case Style::NodeEditorColours::HovLinkBorder:
+    case Style::EditorColour::HovLinkBorder:
         return ed::StyleColor_HovLinkBorder;
-    case Style::NodeEditorColours::HovNodeBorder:
+    case Style::EditorColour::HovNodeBorder:
         return ed::StyleColor_HovNodeBorder;
-    case Style::NodeEditorColours::LinkSelRect:
+    case Style::EditorColour::LinkSelRect:
         return ed::StyleColor_LinkSelRect;
-    case Style::NodeEditorColours::LinkSelRectBorder:
+    case Style::EditorColour::LinkSelRectBorder:
         return ed::StyleColor_LinkSelRectBorder;
-    case Style::NodeEditorColours::NodeBg:
+    case Style::EditorColour::NodeBg:
         return ed::StyleColor_NodeBg;
-    case Style::NodeEditorColours::NodeBorder:
+    case Style::EditorColour::NodeBorder:
         return ed::StyleColor_NodeBorder;
-    case Style::NodeEditorColours::NodeSelRect:
+    case Style::EditorColour::NodeSelRect:
         return ed::StyleColor_NodeSelRect;
-    case Style::NodeEditorColours::NodeSelRectBorder:
+    case Style::EditorColour::NodeSelRectBorder:
         return ed::StyleColor_NodeSelRectBorder;
-    case Style::NodeEditorColours::PinRect:
+    case Style::EditorColour::PinRect:
         return ed::StyleColor_PinRect;
-    case Style::NodeEditorColours::PinRectBorder:
+    case Style::EditorColour::PinRectBorder:
         return ed::StyleColor_PinRectBorder;
-    case Style::NodeEditorColours::SelLinkBorder:
+    case Style::EditorColour::SelLinkBorder:
         return ed::StyleColor_SelLinkBorder;
-    case Style::NodeEditorColours::SelNodeBorder:
+    case Style::EditorColour::SelNodeBorder:
         return ed::StyleColor_SelNodeBorder;
     }
 
     return ed::StyleColor(0);
 }
-constexpr Style::NodeEditorColours to_NodeEditorColours(const ed::StyleColor& c)
+constexpr Style::EditorColour to_EditorColour(const ed::StyleColor& c)
 {
     switch (c)
     {
     case ed::StyleColor_Bg:
-        return Style::NodeEditorColours::Bg;
+        return Style::EditorColour::Bg;
     case ed::StyleColor_Flow:
-        return Style::NodeEditorColours::Flow;
+        return Style::EditorColour::Flow;
     case ed::StyleColor_FlowMarker:
-        return Style::NodeEditorColours::FlowMarker;
+        return Style::EditorColour::FlowMarker;
     case ed::StyleColor_Grid:
-        return Style::NodeEditorColours::Grid;
+        return Style::EditorColour::Grid;
     case ed::StyleColor_GroupBg:
-        return Style::NodeEditorColours::GroupBg;
+        return Style::EditorColour::GroupBg;
     case ed::StyleColor_GroupBorder:
-        return Style::NodeEditorColours::GroupBorder;
+        return Style::EditorColour::GroupBorder;
     case ed::StyleColor_HighlightLinkBorder:
-        return Style::NodeEditorColours::HighlightLinkBorder;
+        return Style::EditorColour::HighlightLinkBorder;
     case ed::StyleColor_HovLinkBorder:
-        return Style::NodeEditorColours::HovLinkBorder;
+        return Style::EditorColour::HovLinkBorder;
     case ed::StyleColor_HovNodeBorder:
-        return Style::NodeEditorColours::HovNodeBorder;
+        return Style::EditorColour::HovNodeBorder;
     case ed::StyleColor_LinkSelRect:
-        return Style::NodeEditorColours::LinkSelRect;
+        return Style::EditorColour::LinkSelRect;
     case ed::StyleColor_LinkSelRectBorder:
-        return Style::NodeEditorColours::LinkSelRectBorder;
+        return Style::EditorColour::LinkSelRectBorder;
     case ed::StyleColor_NodeBg:
-        return Style::NodeEditorColours::NodeBg;
+        return Style::EditorColour::NodeBg;
     case ed::StyleColor_NodeBorder:
-        return Style::NodeEditorColours::NodeBorder;
+        return Style::EditorColour::NodeBorder;
     case ed::StyleColor_NodeSelRect:
-        return Style::NodeEditorColours::NodeSelRect;
+        return Style::EditorColour::NodeSelRect;
     case ed::StyleColor_NodeSelRectBorder:
-        return Style::NodeEditorColours::NodeSelRectBorder;
+        return Style::EditorColour::NodeSelRectBorder;
     case ed::StyleColor_PinRect:
-        return Style::NodeEditorColours::PinRect;
+        return Style::EditorColour::PinRect;
     case ed::StyleColor_PinRectBorder:
-        return Style::NodeEditorColours::PinRectBorder;
+        return Style::EditorColour::PinRectBorder;
     case ed::StyleColor_SelLinkBorder:
-        return Style::NodeEditorColours::SelLinkBorder;
+        return Style::EditorColour::SelLinkBorder;
     case ed::StyleColor_SelNodeBorder:
-        return Style::NodeEditorColours::SelNodeBorder;
+        return Style::EditorColour::SelNodeBorder;
     default:
-        return Style::NodeEditorColours(0);
+        return Style::EditorColour(0);
     }
-
-    return Style::NodeEditorColours(0);
 }
 
 constexpr ImGuiCol_ to_ImGuiCol(const Style::BaseColour& c)
@@ -234,7 +232,8 @@ constexpr ImGuiCol_ to_ImGuiCol(const Style::BaseColour& c)
 constexpr ImColor to_ImColor(const Colour& c) noexcept { return ImColor(c.R, c.G, c.B, c.A); }
 constexpr Colour to_Colour(const ImVec4& c) noexcept
 {
-    return Colour(c.x * 255.f, c.y * 255.f, c.z * 255.f, c.w * 255.f);
+    return Colour(static_cast<std::uint8_t>(c.x * 255.f), static_cast<std::uint8_t>(c.y * 255.f),
+                  static_cast<std::uint8_t>(c.z * 255.f), static_cast<std::uint8_t>(c.w * 255.f));
 }
 
 inline ImGuiStyle& to_ImGuiStyle(const Style& style) noexcept

@@ -55,6 +55,8 @@ class Editor
 
     flow::EventDispatcher<const std::shared_ptr<Graph>&> OnActiveGraphChanged;
 
+    void* GetContext() const noexcept;
+
   protected:
     void Init(const std::string& initial_file);
     void Teardown();

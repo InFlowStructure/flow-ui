@@ -59,7 +59,7 @@ void NodeBuilder::Header(const ImVec4& color)
 
 void NodeBuilder::EndHeader() { SetStage(Stage::Content); }
 
-void NodeBuilder::Port(ed::PinId id)
+void NodeBuilder::Input(ed::PinId id)
 {
     if (_current_stage == Stage::Begin)
     {
@@ -77,7 +77,7 @@ void NodeBuilder::Port(ed::PinId id)
     ImGui::BeginHorizontal(id.AsPointer());
 }
 
-void NodeBuilder::EndPort()
+void NodeBuilder::EndInput()
 {
     ImGui::EndHorizontal();
     EndPin();
