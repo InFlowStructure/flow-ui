@@ -27,7 +27,7 @@ class Input : public InputInterface
 
     virtual void operator()() noexcept override;
 
-    virtual flow::SharedNodeData GetData() noexcept
+    virtual flow::SharedNodeData GetData() noexcept override
     {
         auto d = std::move(_data);
         _data  = nullptr;
