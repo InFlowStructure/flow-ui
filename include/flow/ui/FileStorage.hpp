@@ -40,7 +40,7 @@ class FileStorage
     json Load(std::string& filename);
     std::string Save(std::string_view data, std::string_view default_save_name, bool new_save = false);
 
-    std::filesystem::path GetExtensionPath() const { return _base_lib_path; }
+    std::filesystem::path GetModulesPath() const { return _base_lib_path; }
     std::filesystem::path GetSavePath() const { return _base_save_path; }
 
     static std::filesystem::path GetHomePath();

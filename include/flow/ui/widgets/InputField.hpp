@@ -34,6 +34,8 @@ class Input : public InputInterface
         return d;
     }
 
+    virtual const T& GetValue() const noexcept { return _value; }
+
   private:
     std::string _name;
     T _value;

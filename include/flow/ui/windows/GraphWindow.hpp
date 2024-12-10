@@ -42,7 +42,7 @@ class GraphWindow : public Window
 
     void SetCurrentGraph();
 
-    void Draw();
+    virtual void Draw() override;
 
     std::shared_ptr<flow::Graph>& GetGraph() { return _graph; }
     const std::shared_ptr<flow::Graph>& GetGraph() const { return _graph; }

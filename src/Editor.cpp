@@ -8,6 +8,7 @@
 #include "ViewFactory.hpp"
 #include "Window.hpp"
 #include "utilities/Conversions.hpp"
+#include "windows/ModuleManagerWindow.hpp"
 
 #include <flow/core/Node.hpp>
 #include <flow/core/NodeFactory.hpp>
@@ -60,47 +61,11 @@ Editor::Editor(const std::string& initial_file)
     _params.callbacks.PreNewFrame = [=, this] {
         HandleInput();
 
-        auto& dockable_windows      = _params.dockingParams.dockableWindows;
-        auto graph_windows_begin_it = GetDockableGraphWindowBegin();
+        OnGraphWindowAdded.Broadcast();
+        OnGraphWindowAdded.UnbindAll();
 
-        auto it = std::remove_if(graph_windows_begin_it, dockable_windows.end(), [&, this](auto&& dw) {
-            return std::none_of(_graph_windows.begin(), _graph_windows.end(),
-                                [&](auto& g) { return dw.label == g.second->GetGraph()->GetName(); });
-        });
-
-        if (it != dockable_windows.end())
-        {
-            dockable_windows.erase(it, dockable_windows.end());
-        }
-
-        for (auto& [_, graph_view] : _graph_windows)
-        {
-            const auto& name = graph_view->GetGraph()->GetName();
-            if (!!_params.dockingParams.dockableWindowOfName(name))
-            {
-                continue;
-            }
-
-            HelloImGui::DockableWindow graph_window;
-            graph_window.label         = name;
-            graph_window.dockSpaceName = DefaultDockspaces::Main;
-            graph_window.GuiFunction   = [this, gv = graph_view]() {
-                if (gv->IsActive())
-                {
-                    OnActiveGraphChanged.Broadcast(gv->GetGraph());
-                }
-                gv->Draw();
-            };
-            graph_window.includeInViewMenu      = false;
-            graph_window.callBeginEnd           = false;
-            graph_window.focusWindowAtNextFrame = true;
-            graph_window.imGuiWindowFlags       = ImGuiWindowFlags_NoCollapse;
-
-            dockable_windows.push_back(graph_window);
-
-            // FIXME(trigaux): This will reset all windows, but it is currently the only way to dock new graph windows.
-            _params.dockingParams.layoutReset = true;
-        };
+        OnGraphWindowRemoved.Broadcast();
+        OnGraphWindowRemoved.UnbindAll();
     };
 
     _params.imGuiWindowParams.showMenu_View_Themes = false;
@@ -160,8 +125,6 @@ Editor::Editor(const std::string& initial_file)
 
 void Editor::Init(const std::string& initial_file)
 {
-    _env->LoadModules(_filestorage.GetExtensionPath().string());
-
     _env->GetFactory()->RegisterNodeClass<PreviewNode>("Editor", "Preview");
     _factory->RegisterNodeView<PreviewNodeView, PreviewNode>();
 
@@ -187,14 +150,15 @@ void Editor::Init(const std::string& initial_file)
     _factory->RegisterInputType<std::chrono::months>(std::chrono::months::zero());
     _factory->RegisterInputType<std::chrono::years>(std::chrono::years::zero());
 
+    AddWindow(std::make_shared<ModuleManagerWindow>(_env, _filestorage.GetModulesPath()), DefaultDockspaces::Main);
+
     if (!initial_file.empty())
     {
         LoadFlow(initial_file);
     }
     else
     {
-        auto graph                  = std::make_shared<flow::Graph>("untitled##0", _env);
-        _graph_windows[graph->ID()] = std::make_shared<GraphWindow>(graph);
+        CreateFlow("untitled##0");
     }
 
     for (auto& window : _windows)
@@ -213,17 +177,18 @@ void Editor::Teardown()
 
 void Editor::Run() { HelloImGui::Run(_params); }
 
-void Editor::AddWindow(std::shared_ptr<Window> new_window, const std::string& dockspace)
+void Editor::AddWindow(std::shared_ptr<Window> new_window, const std::string& dockspace, bool show)
 {
     auto& window = _windows.emplace_back(std::move(new_window));
 
     HelloImGui::DockableWindow dockable_window;
     dockable_window.label            = window->GetName();
     dockable_window.dockSpaceName    = dockspace;
-    dockable_window.GuiFunction      = [&] { window->Draw(); };
+    dockable_window.GuiFunction      = [=] { window->Draw(); };
     dockable_window.imGuiWindowFlags = ImGuiWindowFlags_NoCollapse;
+    dockable_window.isVisible        = show;
 
-    _params.dockingParams.dockableWindows.push_back(std::move(dockable_window));
+    HelloImGui::AddDockableWindow(std::move(dockable_window));
 }
 
 void Editor::AddDockspace(std::string name, std::string initial_dockspace_name, float ratio,
@@ -260,6 +225,8 @@ void Editor::HandleInput()
         {
             if (it->second->IsOpen() && it->second->IsActive())
             {
+                OnGraphWindowRemoved.Bind(IndexableName{it->second->GetName()},
+                                          [name = it->second->GetName()] { HelloImGui::RemoveDockableWindow(name); });
                 it = _graph_windows.erase(it);
                 break;
             }
@@ -280,6 +247,8 @@ void Editor::HandleInput()
         }
         else
         {
+            OnGraphWindowRemoved.Bind(IndexableName{it->second->GetName()},
+                                      [name = it->second->GetName()] { HelloImGui::RemoveDockableWindow(name); });
             it = _graph_windows.erase(it);
         }
     }
@@ -309,12 +278,24 @@ void Editor::DrawMainMenuBar()
             SaveFlow(true);
         }
 
-        if (ImGui::MenuItem("Add Extension"))
+        if (ImGui::MenuItem("Import Module"))
         {
             FileStorage::Dialog d;
-            std::string filename;
-            filename = d.LoadLib(_filestorage.GetExtensionPath());
-            _env->LoadModule(filename);
+            std::filesystem::path filename = d.LoadLib(_filestorage.GetModulesPath());
+
+            const auto new_module_file = _filestorage.GetModulesPath() / filename.filename();
+            if (new_module_file != filename)
+            {
+                try
+                {
+                    std::filesystem::copy_file(filename, new_module_file,
+                                               std::filesystem::copy_options::update_existing);
+                }
+                catch (const std::exception& e)
+                {
+                    SPDLOG_ERROR("Caught exception while loading module {}: {}", filename.string(), e.what());
+                }
+            }
         }
 
         ImGui::EndMenu();
@@ -340,8 +321,26 @@ std::shared_ptr<GraphWindow>& Editor::CreateFlow(std::string name)
                               [&](const auto& entry) { return entry.second->GetName() == name; });
     if (found != _graph_windows.end()) return found->second;
 
-    auto graph           = std::make_shared<flow::Graph>(std::move(name), _env);
+    auto graph           = std::make_shared<flow::Graph>(name, _env);
     auto [graph_view, _] = _graph_windows.emplace(graph->ID(), std::make_shared<GraphWindow>(graph));
+    OnGraphWindowAdded.Bind(IndexableName{name}, [=, this, graph_view = graph_view->second] {
+        HelloImGui::DockableWindow graph_window;
+        graph_window.label         = name;
+        graph_window.dockSpaceName = DefaultDockspaces::Main;
+        graph_window.GuiFunction   = [this, gv = std::move(graph_view)]() {
+            if (gv->IsActive())
+            {
+                OnActiveGraphChanged.Broadcast(gv->GetGraph());
+            }
+            gv->Draw();
+        };
+        graph_window.includeInViewMenu      = false;
+        graph_window.callBeginEnd           = false;
+        graph_window.focusWindowAtNextFrame = true;
+        graph_window.imGuiWindowFlags       = ImGuiWindowFlags_NoCollapse;
+
+        HelloImGui::AddDockableWindow(std::move(graph_window));
+    });
 
     return graph_view->second;
 }

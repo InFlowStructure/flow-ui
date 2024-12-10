@@ -43,7 +43,7 @@ class Editor
 
     void Run();
 
-    void AddWindow(std::shared_ptr<Window> new_window, const std::string& dockspace);
+    void AddWindow(std::shared_ptr<Window> new_window, const std::string& dockspace, bool show = true);
     void AddDockspace(std::string name, std::string initial_dockspace_name, float ratio,
                       DockspaceSplitDirection direction);
 
@@ -82,6 +82,8 @@ class Editor
 
     std::vector<std::shared_ptr<Window>> _windows;
     std::unordered_map<flow::UUID, std::shared_ptr<GraphWindow>> _graph_windows;
+    flow::EventDispatcher<> OnGraphWindowAdded;
+    flow::EventDispatcher<> OnGraphWindowRemoved;
 };
 
 FLOW_UI_NAMESPACE_END

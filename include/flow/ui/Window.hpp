@@ -26,7 +26,7 @@ class Window
 
     virtual void Init() {}
     virtual void Teardown() {}
-    virtual void Draw() = 0;
+    virtual void Draw();
 
   protected:
     std::string _name;
