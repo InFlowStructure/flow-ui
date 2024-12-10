@@ -64,10 +64,12 @@ set(flow-ui_HEADERS_DIR "${CMAKE_CURRENT_LIST_DIR}/include/flow/ui")
 file(GLOB flow-ui_HEADERS "${flow-ui_HEADERS_DIR}/*.hpp")
 file(GLOB flow-ui_UTILITY_HEADERS "${flow-ui_HEADERS_DIR}/utilities/*.hpp")
 file(GLOB flow-ui_VIEW_HEADERS "${flow-ui_HEADERS_DIR}/views/*.hpp")
+file(GLOB flow-ui_WIDGET_HEADERS "${flow-ui_HEADERS_DIR}/widgets/*.hpp")
 file(GLOB flow-ui_WINDOW_HEADERS "${flow-ui_HEADERS_DIR}/windows/*.hpp")
 list(APPEND flow-ui_HEADERS
   ${flow-ui_UTILITY_HEADERS}
   ${flow-ui_VIEW_HEADERS}
+  ${flow-ui_WIDGET_HEADERS}
   ${flow-ui_WINDOW_HEADERS}
 )
 

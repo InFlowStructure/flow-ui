@@ -1,5 +1,5 @@
+#include "Text.hpp"
 #include "utilities/Conversions.hpp"
-#include "widgets/Text.hpp"
 
 FLOW_UI_SUBNAMESPACE_START(widgets)
 

@@ -1,5 +1,5 @@
+#include "PropertyTree.hpp"
 #include "Table.hpp"
-#include "widgets/PropertyTree.hpp"
 
 #include <imgui.h>
 

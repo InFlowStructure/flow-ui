@@ -1,4 +1,4 @@
-#include "widgets/Table.hpp"
+#include "Table.hpp"
 
 #include <imgui.h>
 
