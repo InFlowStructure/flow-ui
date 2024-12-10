@@ -1,5 +1,6 @@
-#include "InputField.hpp"
 #include "ModuleManagerWindow.hpp"
+
+#include "InputField.hpp"
 #include "Text.hpp"
 #include "Widget.hpp"
 
