@@ -125,6 +125,28 @@ Editor::Editor(const std::string& initial_file)
 
 void Editor::Init(const std::string& initial_file)
 {
+    _factory->OnNodeClassUnregistered.Bind("Unregister", [&](std::string_view class_name) {
+        for (const auto& [_, gw] : _graph_windows)
+        {
+            const auto& graph = gw->GetGraph();
+
+            std::set<flow::UUID> nodes_to_remove;
+            graph->Visit([&](const auto& node) {
+                if (node->GetClass() == class_name)
+                {
+                    nodes_to_remove.insert(node->ID());
+                }
+            });
+
+            for (const auto& id : nodes_to_remove)
+            {
+                graph->RemoveNodeByID(id);
+                ed::SetCurrentEditor(gw->GetEditorContext());
+                ed::DeleteNode(std::hash<UUID>{}(id));
+            }
+        }
+    });
+
     _env->GetFactory()->RegisterNodeClass<PreviewNode>("Editor", "Preview");
     _factory->RegisterNodeView<PreviewNodeView, PreviewNode>();
 
@@ -384,18 +406,6 @@ void Editor::SaveFlow(bool save_as)
     }
 
     graph_view->MarkDirty(false);
-}
-
-std::vector<HelloImGui::DockableWindow>::iterator Editor::GetDockableGraphWindowBegin() noexcept
-{
-    return std::find_if(_params.dockingParams.dockableWindows.begin(), _params.dockingParams.dockableWindows.end(),
-                        [this](const auto& w) {
-                            auto graph = std::find_if(_graph_windows.begin(), _graph_windows.end(),
-                                                      [&](const auto& gw) { return gw.second->GetName() == w.label; });
-                            if (graph == _graph_windows.end()) return false;
-
-                            return std::dynamic_pointer_cast<GraphWindow>(graph->second) != nullptr;
-                        });
 }
 
 FLOW_UI_NAMESPACE_END

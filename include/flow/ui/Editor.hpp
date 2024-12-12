@@ -69,8 +69,6 @@ class Editor
     void LoadFlow(std::string file = "");
     void SaveFlow(bool save_as);
 
-    std::vector<HelloImGui::DockableWindow>::iterator GetDockableGraphWindowBegin() noexcept;
-
   private:
     FileStorage _filestorage{
         std::filesystem::current_path() / "modules",
