@@ -5,6 +5,8 @@
 
 #include <flow/core/Core.hpp>
 
+#include <memory>
+
 #define FLOW_UI_NAMESPACE FLOW_NAMESPACE::ui
 #define FLOW_UI_NAMESPACE_START                                                                                        \
     /** The UI namespace. */                                                                                           \
@@ -22,6 +24,22 @@
 
 FLOW_UI_NAMESPACE_START
 
-void* GetEditorContext() noexcept;
+class EditorContext;
+
+FLOW_UI_NAMESPACE_END
+
+template<>
+struct std::default_delete<FLOW_UI_NAMESPACE::EditorContext>
+{
+    void operator()(FLOW_UI_NAMESPACE::EditorContext*) const {}
+};
+
+FLOW_UI_NAMESPACE_START
+
+/**
+ * @brief Get the current context for the graph editor.
+ * @returns A wrapper around the editor context.
+ */
+std::unique_ptr<EditorContext> GetEditorContext() noexcept;
 
 FLOW_UI_NAMESPACE_END

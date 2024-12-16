@@ -107,7 +107,7 @@ try
 
     if (GetConfig().NodeHeaderFont)
     {
-        ImGui::PushFont(GetConfig().NodeHeaderFont);
+        ImGui::PushFont(std::bit_cast<ImFont*>(GetConfig().NodeHeaderFont.get()));
         ImGui::TextUnformatted(name);
         ImGui::PopFont();
     }
@@ -220,7 +220,7 @@ try
 
     auto draw_list         = ed::GetNodeBackgroundDrawList(_id);
     const ImVec2 text_size = ImGui::CalcTextSize(name) * 2.f;
-    draw_list->AddText(GetConfig().NodeHeaderFont, 40.f,
+    draw_list->AddText(std::bit_cast<ImFont*>(GetConfig().NodeHeaderFont.get()), 40.f,
                        _builder->GetMinPos() - (text_size / 2) + (_builder->GetSize() / 2),
                        IM_COL32(180, 180, 180, 255), name);
 
@@ -263,7 +263,7 @@ void CommentView::Draw()
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.f, 0.f));
         ImGui::BeginHorizontal("horizontal");
         {
-            ImGui::PushFont(GetConfig().NodeHeaderFont);
+            ImGui::PushFont(std::bit_cast<ImFont*>(GetConfig().NodeHeaderFont.get()));
             ImGui::Dummy(ImVec2(5.f, 0));
 
             if (_edit)

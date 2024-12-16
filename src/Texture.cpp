@@ -15,16 +15,16 @@ HelloImGui::ImageAbstractPtr CreateImage()
 {
     auto render_backend = flow::ui::GetConfig().RenderBackend;
 #ifdef HELLOIMGUI_HAS_OPENGL
-    if (render_backend == HelloImGui::RendererBackendType::OpenGL3) return std::make_shared<HelloImGui::ImageOpenGl>();
+    if (render_backend == flow::ui::RendererBackend::OpenGL3) return std::make_shared<HelloImGui::ImageOpenGl>();
 #endif
 #if (HELLOIMGUI_HAS_METAL)
-    if (render_backend == HelloImGui::RendererBackendType::Metal) return std::make_shared<HelloImGui::ImageMetal>();
+    if (render_backend == flow::ui::RendererBackend::Metal) return std::make_shared<HelloImGui::ImageMetal>();
 #endif
 #if (HELLOIMGUI_HAS_VULKAN)
-    if (render_backend == HelloImGui::RendererBackendType::Vulkan) return std::make_shared<HelloImGui::ImageVulkan>();
+    if (render_backend == flow::ui::RendererBackend::Vulkan) return std::make_shared<HelloImGui::ImageVulkan>();
 #endif
 #if (HELLOIMGUI_HAS_DIRECTX11)
-    if (render_backend == HelloImGui::RendererBackendType::DirectX11) return std::make_shared<HelloImGui::ImageDx11>();
+    if (render_backend == flow::ui::RendererBackend::DirectX11) return std::make_shared<HelloImGui::ImageDx11>();
 #endif
 
     return nullptr;

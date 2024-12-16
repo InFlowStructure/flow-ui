@@ -28,7 +28,7 @@ struct PreviewNodeView : NodeView
         const auto& name = Node->GetName().c_str();
         if (GetConfig().NodeHeaderFont)
         {
-            ImGui::PushFont(GetConfig().NodeHeaderFont);
+            ImGui::PushFont(std::bit_cast<ImFont*>(GetConfig().NodeHeaderFont.get()));
             ImGui::TextUnformatted(name);
             ImGui::PopFont();
         }
@@ -43,7 +43,7 @@ struct PreviewNodeView : NodeView
 
         if (GetConfig().IconFont)
         {
-            ImGui::PushFont(GetConfig().IconFont);
+            ImGui::PushFont(std::bit_cast<ImFont*>(GetConfig().IconFont.get()));
         }
 
         const bool should_copy = ImGui::Button(ICON_FA_COPY);

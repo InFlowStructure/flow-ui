@@ -78,7 +78,7 @@ add_library(${PROJECT_NAME} SHARED
   src/Config.cpp
   src/Core.cpp
   src/Editor.cpp
-  src/FileStorage.cpp
+  src/FileExplorer.cpp
   src/Style.cpp
   src/Texture.cpp
   src/ViewFactory.cpp

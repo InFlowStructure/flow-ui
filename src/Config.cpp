@@ -3,19 +3,24 @@
 
 #include "Config.hpp"
 
+#include <hello_imgui/hello_imgui.h>
+
+#include <bit>
 #include <cstdint>
 
 FLOW_UI_NAMESPACE_START
 
-static Config config{
-    .DefaultFont    = nullptr,
-    .IconFont       = nullptr,
-    .NodeHeaderFont = nullptr,
-};
+static Config config{};
 
-ImFont* LoadFont(const std::string& font_path, float size, const HelloImGui::FontLoadingParams& params)
+std::unique_ptr<Font> LoadFont(const std::string& font_path, float size)
 {
-    return HelloImGui::LoadFont(font_path, size, params);
+    HelloImGui::FontLoadingParams params;
+    params.useFullGlyphRange                 = true;
+    params.fontConfig.RasterizerDensity      = 4.f;
+    params.reduceMemoryUsageIfFullGlyphRange = true;
+    auto font                                = HelloImGui::LoadFont(font_path, size, params);
+
+    return std::unique_ptr<Font>(std::bit_cast<Font*>(font));
 }
 
 Config& GetConfig() { return config; }

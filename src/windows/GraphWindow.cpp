@@ -547,7 +547,7 @@ void GraphWindow::ShowNodeContextMenu()
 
     ImGui::SetCursorPos({(ImGui::GetItemRectMax() - ImGui::GetItemRectMin()).x - 18, 4});
 
-    ImGui::PushFont(GetConfig().IconFont);
+    ImGui::PushFont(std::bit_cast<ImFont*>(GetConfig().IconFont.get()));
     ImGui::TextUnformatted(ICON_FA_MAGNIFYING_GLASS);
     ImGui::PopFont();
 

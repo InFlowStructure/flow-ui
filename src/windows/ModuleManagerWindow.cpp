@@ -55,15 +55,12 @@ class ModuleView : public Widget
 ModuleManagerWindow::ModuleManagerWindow(std::shared_ptr<Env> env, const std::filesystem::path& modules_path)
     : Window("Module Manager"), _env(std::move(env)), _modules_path(modules_path)
 {
-    for (const auto& module : std::filesystem::directory_iterator(_modules_path))
-    {
-        _widgets.emplace_back(std::make_shared<ModuleView>(module.path(), _env));
-    }
+    std::filesystem::create_directory(_modules_path);
 }
 
 void ModuleManagerWindow::Draw()
 {
-    if (_widgets.empty())
+    if (!std::filesystem::exists(_modules_path) || std::filesystem::is_empty(_modules_path))
     {
         return Window::Draw();
     }
@@ -75,13 +72,19 @@ void ModuleManagerWindow::Draw()
     ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(10.f, 10.f));
     ImGui::BeginTable((_name + "##list").c_str(), 2,
                       ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuter);
-    for (const auto& widget : _widgets)
-    {
-        if (!widget) continue;
 
+    for (const auto& module : std::filesystem::directory_iterator(_modules_path))
+    {
         ImGui::TableNextColumn();
-        (*widget)();
+
+        const auto& module_name = module.path().string();
+        if (!_widgets.contains(module_name))
+        {
+            _widgets[module_name] = std::make_shared<ModuleView>(module.path(), _env);
+        }
+        (*_widgets.at(module_name))();
     }
+
     ImGui::EndTable();
     ImGui::PopStyleVar(5);
 }

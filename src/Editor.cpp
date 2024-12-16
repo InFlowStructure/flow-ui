@@ -18,6 +18,7 @@
 #include <hello_imgui/icons_font_awesome_6.h>
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <imgui_node_editor.h>
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
@@ -26,6 +27,9 @@
 #include <iostream>
 
 FLOW_UI_NAMESPACE_START
+
+const std::filesystem::path default_save_path    = FileExplorer::GetDocumentsPath() / "flows";
+const std::filesystem::path default_modules_path = FileExplorer::GetExecutablePath() / "modules";
 
 HelloImGui::RunnerParams _params;
 
@@ -38,7 +42,7 @@ Editor::Editor(const std::string& initial_file)
     _params.appWindowParams.windowGeometry.size     = {1920, 1080};
 
     _params.callbacks.PostInit = [&] {
-        GetConfig().RenderBackend = _params.rendererBackendType;
+        GetConfig().RenderBackend = utility::to_RendererBackend(_params.rendererBackendType);
 
         SetupStyle(GetStyle());
         utility::to_ImGuiStyle(GetStyle());
@@ -115,7 +119,7 @@ Editor::Editor(const std::string& initial_file)
     _params.callbacks.LoadAdditionalFonts = [&] {
         auto& config = GetConfig();
         LoadFonts(config);
-        ImGui::GetIO().FontDefault = config.DefaultFont;
+        ImGui::GetIO().FontDefault = std::bit_cast<ImFont*>(config.DefaultFont.get());
     };
     _params.callbacks.ShowMenus = [&] {
         DrawMainMenuBar();
@@ -172,7 +176,7 @@ void Editor::Init(const std::string& initial_file)
     _factory->RegisterInputType<std::chrono::months>(std::chrono::months::zero());
     _factory->RegisterInputType<std::chrono::years>(std::chrono::years::zero());
 
-    AddWindow(std::make_shared<ModuleManagerWindow>(_env, _filestorage.GetModulesPath()), DefaultDockspaces::Main);
+    AddWindow(std::make_shared<ModuleManagerWindow>(_env, default_modules_path), DefaultDockspace);
 
     if (!initial_file.empty())
     {
@@ -219,7 +223,7 @@ void Editor::AddDockspace(std::string name, std::string initial_dockspace_name, 
     HelloImGui::DockingSplit split;
     split.initialDock = std::move(initial_dockspace_name);
     split.newDock     = std::move(name);
-    split.direction   = static_cast<ImGuiDir>(direction);
+    split.direction   = utility::to_ImGuiDir(direction);
     split.ratio       = ratio;
 
     _params.dockingParams.dockingSplits.push_back(std::move(split));
@@ -237,9 +241,10 @@ void Editor::HandleInput()
     {
         LoadFlow();
     }
-    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_S))
+    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_S) ||
+        ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiMod_Alt | ImGuiKey_S))
     {
-        SaveFlow(false);
+        SaveFlow();
     }
     if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_W))
     {
@@ -255,10 +260,6 @@ void Editor::HandleInput()
             ++it;
             OnActiveGraphChanged.Broadcast(it->second->GetGraph());
         }
-    }
-    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiMod_Alt | ImGuiKey_S))
-    {
-        SaveFlow(true);
     }
 
     for (auto it = _graph_windows.begin(); it != _graph_windows.end();)
@@ -292,26 +293,25 @@ void Editor::DrawMainMenuBar()
 
         if (ImGui::MenuItem("Save"))
         {
-            SaveFlow(false);
+            SaveFlow();
         }
 
         if (ImGui::MenuItem("Save As"))
         {
-            SaveFlow(true);
+            SaveFlow();
         }
 
         if (ImGui::MenuItem("Import Module"))
         {
-            FileStorage::Dialog d;
-            std::filesystem::path filename = d.LoadLib(_filestorage.GetModulesPath());
+            const auto filename        = FileExplorer::Load(default_modules_path, "Flow Modules", "so,dll,dylib");
+            const auto new_module_file = default_modules_path / filename.filename();
 
-            const auto new_module_file = _filestorage.GetModulesPath() / filename.filename();
             if (new_module_file != filename)
             {
                 try
                 {
-                    std::filesystem::copy_file(filename, new_module_file,
-                                               std::filesystem::copy_options::update_existing);
+                    std::filesystem::create_directory(default_modules_path);
+                    std::filesystem::copy_file(filename, new_module_file, std::filesystem::copy_options::skip_existing);
                 }
                 catch (const std::exception& e)
                 {
@@ -348,7 +348,7 @@ std::shared_ptr<GraphWindow>& Editor::CreateFlow(std::string name)
     OnGraphWindowAdded.Bind(IndexableName{name}, [=, this, graph_view = graph_view->second] {
         HelloImGui::DockableWindow graph_window;
         graph_window.label         = name;
-        graph_window.dockSpaceName = DefaultDockspaces::Main;
+        graph_window.dockSpaceName = DefaultDockspace;
         graph_window.GuiFunction   = [this, gv = std::move(graph_view)]() {
             if (gv->IsActive())
             {
@@ -367,12 +367,27 @@ std::shared_ptr<GraphWindow>& Editor::CreateFlow(std::string name)
     return graph_view->second;
 }
 
-void Editor::LoadFlow(std::string file)
+void Editor::LoadFlow(const std::filesystem::path& filename)
 {
-    json j = _filestorage.Load(file);
-    if (j.empty()) return;
+    auto file_path = FileExplorer::Load(default_save_path / filename, "Flow files", "flow");
 
-    const std::string name = std::filesystem::path(file).filename().replace_extension("").string();
+    json j;
+    try
+    {
+        std::ifstream i;
+        i.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+
+        i.open(file_path);
+        i >> j;
+        i.close();
+    }
+    catch (const std::exception& e)
+    {
+        SPDLOG_ERROR("Failed to load file '{0}: {1}", file_path.filename().string(), e.what());
+        return;
+    }
+
+    const std::string name = file_path.filename().replace_extension("").string();
 
     auto& graph_view = CreateFlow(name);
 
@@ -382,7 +397,7 @@ void Editor::LoadFlow(std::string file)
     graph_view->GetGraph()->Run();
 }
 
-void Editor::SaveFlow(bool save_as)
+void Editor::SaveFlow()
 {
     auto graph_window_it = std::find_if(_graph_windows.begin(), _graph_windows.end(), [](auto& gw) {
         return ed::GetCurrentEditor() == gw.second->GetEditorContext();
@@ -392,14 +407,16 @@ void Editor::SaveFlow(bool save_as)
     auto& graph      = graph_window_it->second->GetGraph();
     auto& graph_view = graph_window_it->second;
 
-    std::string_view name = graph->GetName();
-    if (name.find("##") != std::string_view::npos)
+    std::string name{graph->GetName()};
+    if (name.find("##") != std::string::npos)
     {
         name = name.substr(0, name.find("##"));
     }
 
-    json saved_json = graph_view->SaveFlow();
-    auto new_name   = _filestorage.Save(saved_json.dump(4), name, save_as);
+    json saved_json     = graph_view->SaveFlow();
+    auto new_path       = FileExplorer::Save(default_save_path / (name + ".flow"), saved_json.dump(4));
+    const auto new_name = new_path.replace_extension("").filename().string();
+
     if (!new_name.empty() && name != new_name)
     {
         graph->SetName(new_name);

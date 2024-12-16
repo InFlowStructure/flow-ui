@@ -7,8 +7,8 @@
 #include <flow/core/Env.hpp>
 
 #include <filesystem>
+#include <map>
 #include <memory>
-#include <vector>
 
 FLOW_UI_NAMESPACE_START
 
@@ -23,7 +23,7 @@ class ModuleManagerWindow : public Window
   private:
     std::shared_ptr<Env> _env;
     std::filesystem::path _modules_path;
-    std::vector<std::shared_ptr<Widget>> _widgets;
+    std::map<std::string, std::shared_ptr<Widget>> _widgets;
 };
 
 FLOW_UI_NAMESPACE_END
