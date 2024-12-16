@@ -9,6 +9,8 @@
 #include <fstream>
 #ifdef FLOW_WINDOWS
 #include <Windows.h>
+#else
+#include <unistd.h>
 #endif
 
 FLOW_UI_NAMESPACE_START
