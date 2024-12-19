@@ -1,0 +1,20 @@
+[submodule "third_party/nfd"]
+	path = third_party/nfd
+	url = https://github.com/btzy/nativefiledialog-extended.git
+[submodule "third_party/flow-core"]
+	path = third_party/flow-core
+	url = https://github.com/InFlowStructure/flow-core.git
+[submodule "third_party/spdlog"]
+	path = third_party/spdlog
+	url = https://github.com/gabime/spdlog.git
+[submodule "third_party/hello_imgui"]
+	path = third_party/hello_imgui
+	url = https://github.com/pthom/hello_imgui.git
+[submodule "third_party/imgui-node-editor"]
+	path = third_party/imgui-node-editor
+	url = https://github.com/pthom/imgui-node-editor.git
+	branch = imgui_bundle
+[submodule "third_party/imgui"]
+	path = third_party/imgui
+	url = https://github.com/pthom/imgui.git
+	branch = imgui_bundle
