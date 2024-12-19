@@ -16,8 +16,8 @@ namespace ed = ax::NodeEditor;
 
 Style::Style()
     : PortShapes{
-        .Default = IconType::Circle,
-        .Ref     = IconType::Diamond,
+        .Default = PortIconType::Circle,
+        .Ref     = PortIconType::Diamond,
     },
     Colours{.TypeColours{
         {TypeName_v<std::any>, Colour(120, 120, 127)},
@@ -41,8 +41,6 @@ Style::Style()
 
         {TypeName_v<std::string>, Colour(124, 21, 153)},
     }},
-    CircleTessellationMaxError(0.1f),
-    CurveTessellationTol(0.1f),
     WindowBorderSize(5.f),
     FrameBorderSize(2.f),
     TabRounding(8.f),

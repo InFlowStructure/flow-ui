@@ -45,25 +45,30 @@ std::filesystem::path FileExplorer::Save(std::filesystem::path save_path, std::s
 {
     if (!std::filesystem::exists(save_path))
     {
-
         nfdchar_t* outPath;
-        nfdfilteritem_t filterItem[1] = {{reinterpret_cast<const nfdu8char_t*>(save_path.extension().c_str())}};
-        nfdresult_t nfd_result =
-            NFD_SaveDialog(&outPath, filterItem, 1, reinterpret_cast<const nfdu8char_t*>(save_path.c_str()),
-                           reinterpret_cast<const nfdu8char_t*>(save_path.replace_extension("").filename().c_str()));
+        std::string ext               = save_path.extension().string();
+        ext                           = ext.substr(1, ext.length() - 1);
+        nfdfilteritem_t filterItem[1] = {{
+            reinterpret_cast<const nfdu8char_t*>(ext.c_str()),
+            reinterpret_cast<const nfdu8char_t*>(ext.c_str()),
+        }};
+        nfdresult_t nfd_result        = NFD_SaveDialog(
+            &outPath, filterItem, 1, reinterpret_cast<const nfdu8char_t*>(save_path.string().c_str()),
+            reinterpret_cast<const nfdu8char_t*>(save_path.replace_extension("").filename().string().c_str()));
         if (nfd_result == NFD_OKAY)
         {
-            std::string result = outPath;
+            save_path = outPath;
             NFD_FreePath(outPath);
-            return result;
         }
         else if (nfd_result == NFD_CANCEL)
         {
             return save_path;
         }
-
-        SPDLOG_ERROR("Error opening file: {0}", NFD_GetError());
-        return save_path;
+        else
+        {
+            SPDLOG_ERROR("Error opening file: {0}", NFD_GetError());
+            return save_path;
+        }
     }
 
     try
@@ -86,7 +91,7 @@ std::filesystem::path FileExplorer::Save(std::filesystem::path save_path, std::s
 std::filesystem::path FileExplorer::GetHomePath()
 {
 
-#if defined(_WIN32) || defined(WIN32)
+#ifdef FLOW_WINDOWS
     const char* dir = std::getenv("USERPROFILE");
 #else
     const char* dir = std::getenv("HOME");
@@ -103,14 +108,15 @@ std::filesystem::path FileExplorer::GetDocumentsPath() { return GetHomePath() / 
 
 std::filesystem::path FileExplorer::GetDownloadsPath() { return GetHomePath() / "Downloads"; }
 
-#ifdef _WIN32
+// TODO(trigaux): This may be undesirable.
+#ifdef FLOW_WINDOWS
 #undef GetTempPath
 #endif
 std::filesystem::path FileExplorer::GetTempPath() { return std::filesystem::temp_directory_path(); }
 
 std::filesystem::path FileExplorer::GetExecutablePath()
 {
-#if defined(FLOW_WINDOWS)
+#ifdef FLOW_WINDOWS
     wchar_t path[FILENAME_MAX] = {0};
     GetModuleFileNameW(nullptr, path, FILENAME_MAX);
     return std::filesystem::path(path).parent_path().string();

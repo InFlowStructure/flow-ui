@@ -4,16 +4,18 @@
 #include "NodeView.hpp"
 
 #include "Config.hpp"
-#include "LinkView.hpp"
+#include "ConnectionView.hpp"
 #include "PortView.hpp"
 #include "ViewFactory.hpp"
+#include "utilities/Builders.hpp"
+#include "utilities/Conversions.hpp"
 #include "utilities/Widgets.hpp"
 
 #include <flow/core/Env.hpp>
 #include <flow/core/Port.hpp>
-
 #include <hello_imgui/icons_font_awesome_6.h>
 #include <imgui_internal.h>
+#include <imgui_node_editor.h>
 #include <imgui_stdlib.h>
 #include <spdlog/spdlog.h>
 
@@ -21,6 +23,9 @@
 #include <vector>
 
 FLOW_UI_NAMESPACE_START
+
+using namespace ax;
+namespace ed = ax::NodeEditor;
 
 namespace
 {
@@ -44,12 +49,15 @@ GraphItemView::~GraphItemView()
         return;
     }
 
-    ed::BreakLinks(_id);
+    ed::BreakLinks(static_cast<ed::NodeId>(_id));
     ed::DeleteNode(_id);
 }
 
-NodeView::NodeView(flow::SharedNode node, ImColor color)
-try : GraphItemView(std::hash<flow::UUID>{}(node->ID())), Name(node->GetName()), Color(color), Node{std::move(node)}
+void GraphItemView::ShowConnectables(const std::shared_ptr<PortView>&) {}
+
+NodeView::NodeView(flow::SharedNode node, Colour header_colour)
+try : GraphItemView(std::hash<flow::UUID>{}(node->ID())), Name(node->GetName()),
+    HeaderColour(header_colour), Node{std::move(node)}, _builder{std::make_shared<utility::NodeBuilder>()}
 {
     Node->OnCompute.Bind("ClearError", [&]() { _received_error = false; });
     Node->OnError.Bind("SetError", [&](const std::exception&) { _received_error = true; });
@@ -73,7 +81,7 @@ try : GraphItemView(std::hash<flow::UUID>{}(node->ID())), Name(node->GetName()),
     for (const auto& input : sorted_ports)
     {
         auto& in = Inputs.emplace_back(std::make_shared<PortView>(_id, input, view_factory, on_input));
-        in->Kind = PinKind::Input;
+        in->Kind = PortType::Input;
         in->SetBuilder(_builder);
     }
 
@@ -81,7 +89,7 @@ try : GraphItemView(std::hash<flow::UUID>{}(node->ID())), Name(node->GetName()),
     for (const auto& [_, output] : Node->GetOutputPorts())
     {
         auto& out = Outputs.emplace_back(std::make_shared<PortView>(_id, output, view_factory, on_input));
-        out->Kind = PinKind::Output;
+        out->Kind = PortType::Output;
         out->SetBuilder(_builder);
     }
 }
@@ -102,7 +110,7 @@ try
 
     _builder->Begin(_id);
 
-    _builder->Header(Color);
+    _builder->Header(utility::to_ImColor(HeaderColour));
     ImGui::Spring(0);
 
     if (GetConfig().NodeHeaderFont)
@@ -153,16 +161,16 @@ catch (const std::exception& e)
     SPDLOG_ERROR("Encounter and error while trying to draw node: {0}", e.what());
 }
 
-void NodeView::ShowLinkables(const std::shared_ptr<PortView>& new_link_pin)
+void NodeView::ShowConnectables(const std::shared_ptr<PortView>& new_link_pin)
 {
     for (auto& port : Inputs)
     {
-        port->ShowLinkable(new_link_pin);
+        port->ShowConnectable(new_link_pin);
     }
 
     for (auto& port : Outputs)
     {
-        port->ShowLinkable(new_link_pin);
+        port->ShowConnectable(new_link_pin);
     }
 }
 
@@ -191,10 +199,10 @@ try
 
     _builder->Begin(_id);
 
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg) - ImVec4(0.f, 0.f, 0.f, 25.f));
+
     try
     {
-        ImGui::PushStyleColor(ImGuiCol_FrameBg,
-                              ImGui::GetStyleColorVec4(ImGuiCol_FrameBg) - ImVec4(0.f, 0.f, 0.f, 25.f));
         for (auto& input : Inputs)
         {
             input->Draw();
@@ -209,12 +217,13 @@ try
         {
             output->Draw();
         }
-        ImGui::PopStyleColor();
     }
     catch (const std::exception& e)
     {
         SPDLOG_ERROR("Caught exception while trying to draw node '{0}': {1}", std::string(Node->ID()), e.what());
     }
+
+    ImGui::PopStyleColor();
 
     _builder->End();
 
@@ -234,7 +243,7 @@ catch (const std::exception& e)
     SPDLOG_ERROR("Encounter and error while trying to draw node: {0}", e.what());
 }
 
-CommentView::CommentView(ImVec2 size, std::string_view name)
+CommentView::CommentView(CommentSize size, std::string_view name)
     : GraphItemView(std::hash<flow::UUID>{}(flow::UUID{})), Name{name}, Size{size}
 {
 }
@@ -256,7 +265,7 @@ void CommentView::Draw()
     ImVec2 HeaderMin(0.f, 0.f);
     ImVec2 HeaderMax(0.f, 0.f);
 
-    ImGui::PushID(ID().AsPointer());
+    ImGui::PushID(std::bit_cast<void*>(ID()));
     auto cursor_pos_x = ImGui::GetCursorPosX();
     ImGui::BeginVertical("content");
     {
@@ -268,7 +277,7 @@ void CommentView::Draw()
 
             if (_edit)
             {
-                ImGui::PushItemWidth(std::min(Size.x, ImGui::CalcTextSize(Name.c_str()).x));
+                ImGui::PushItemWidth(std::min(Size.Width, ImGui::CalcTextSize(Name.c_str()).x));
                 if (ImGui::InputText("", &Name,
                                      ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
                 {
@@ -278,7 +287,7 @@ void CommentView::Draw()
             }
             else
             {
-                ImGui::PushTextWrapPos(cursor_pos_x + Size.x * 0.99f);
+                ImGui::PushTextWrapPos(cursor_pos_x + Size.Width * 0.99f);
                 ImGui::TextWrapped("%s", Name.c_str());
                 ImGui::PopTextWrapPos();
             }
@@ -298,10 +307,10 @@ void CommentView::Draw()
         HeaderMin = ImGui::GetItemRectMin();
         HeaderMax = ImGui::GetItemRectMax();
 
-        ed::Group(Size);
+        ed::Group(ImVec2{Size.Width, Size.Height});
     }
     ImGui::EndVertical();
-    Size.x = (ImGui::GetItemRectMax() - ImGui::GetItemRectMin()).x;
+    Size.Width = (ImGui::GetItemRectMax() - ImGui::GetItemRectMin()).x;
     ImGui::PopID();
 
     ed::EndNode();
@@ -326,7 +335,7 @@ void CommentView::Draw()
 
         ImGui::SetCursorScreenPos(min - ImVec2(-8, ImGui::GetTextLineHeightWithSpacing() + 4));
         ImGui::BeginGroup();
-        ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + Size.x);
+        ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + Size.Width);
         ImGui::TextWrapped("%s", Name.c_str());
         ImGui::PopTextWrapPos();
         ImGui::EndGroup();
@@ -343,51 +352,6 @@ void CommentView::Draw()
                           IM_COL32(255, 255, 255, 128 * bgAlpha / 255), 0.f);
     }
     ed::EndGroupHint();
-}
-
-namespace
-{
-void DrawPinIcon(ImColor colour, bool connected, int alpha)
-{
-    colour.Value.w = alpha / 255.0f;
-    widgets::Icon(ImVec2(24.f, 24.f), IconType::Circle, connected, colour, ImColor(32, 32, 32, alpha));
-}
-} // namespace
-
-RerouteNodeView::RerouteNodeView(const ed::PinId& start_pin, const ed::PinId& end_pin)
-    : GraphItemView(std::hash<flow::UUID>{}({})), InputPinID{start_pin}, _input_id{std::hash<flow::UUID>{}({})},
-      _output_id{std::hash<flow::UUID>{}({})}
-{
-    OutputIDs.insert(end_pin);
-}
-
-void RerouteNodeView::Draw()
-{
-    ed::PushStyleColor(ed::StyleColor_NodeBg, ImColor(255, 255, 255, 0));
-    ed::PushStyleColor(ed::StyleColor_NodeBorder, ImColor(255, 255, 255, 0));
-
-    ed::BeginNode(ID());
-    ImGui::PushID(ID().AsPointer());
-
-    auto cursor_pos = ImGui::GetCursorPos();
-    ed::BeginPin(_input_id, ed::PinKind::Input);
-    ImGui::PushID(_input_id.AsPointer());
-    DrawPinIcon(Colour, !OutputIDs.empty(), 255);
-    ImGui::PopID();
-    ed::EndPin();
-
-    // ImGui::SetCursorPos(cursor_pos);
-
-    ed::BeginPin(_output_id, ed::PinKind::Output);
-    ImGui::PushID(_output_id.AsPointer());
-    DrawPinIcon(Colour, !OutputIDs.empty(), 255);
-    ImGui::PopID();
-    ed::EndPin();
-
-    ImGui::PopID();
-    ed::EndNode();
-
-    ed::PopStyleColor(2);
 }
 
 FLOW_UI_NAMESPACE_END

@@ -3,6 +3,8 @@
 #include "Config.hpp"
 #include "Core.hpp"
 #include "Texture.hpp"
+#include "utilities/Builders.hpp"
+#include "utilities/Conversions.hpp"
 #include "views/NodeView.hpp"
 
 #include <flow/core/Node.hpp>
@@ -22,7 +24,7 @@ struct PreviewNodeView : NodeView
     {
         _builder->Begin(this->ID());
 
-        _builder->Header(Color);
+        _builder->Header(utility::to_ImColor(HeaderColour));
         ImGui::Spring(0);
 
         const auto& name = Node->GetName().c_str();
@@ -69,7 +71,8 @@ struct PreviewNodeView : NodeView
             if (auto texture_data = factory->Convert<Texture>(data))
             {
                 Texture& texture = texture_data->Get();
-                ImGui::Image(texture.ID, texture.Size);
+                ImGui::Image(texture.ID,
+                             ImVec2(static_cast<float>(texture.Size.Width), static_cast<float>(texture.Size.Height)));
 
                 if (should_copy)
                 {

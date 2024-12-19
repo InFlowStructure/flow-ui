@@ -7,7 +7,7 @@
 
 #include <imgui_node_editor.h>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_SUBNAMESPACE_START(utility)
 
 namespace ed = ax::NodeEditor;
 
@@ -65,4 +65,4 @@ class NodeBuilder
     ImVec2 _content_max;
 };
 
-FLOW_UI_NAMESPACE_END
+FLOW_UI_SUBNAMESPACE_END

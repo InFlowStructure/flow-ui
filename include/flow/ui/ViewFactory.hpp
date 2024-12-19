@@ -20,6 +20,9 @@ FLOW_UI_NAMESPACE_START
 template<class T>
 concept NodeViewType = std::is_base_of_v<NodeView, T>;
 
+/**
+ * @brief Factory for creating nodes as well as node views and input fields.
+ */
 class ViewFactory : public flow::NodeFactory
 {
     using NodeViewConstructorCallback = std::function<NodeView*(flow::SharedNode)>;
@@ -28,20 +31,42 @@ class ViewFactory : public flow::NodeFactory
     ViewFactory()          = default;
     virtual ~ViewFactory() = default;
 
+    /**
+     * @brief Register a view type to a node type.
+     *
+     * @tparam ViewType The node view type to register.
+     * @tparam NodeType The node type to register the view type to.
+     */
     template<NodeViewType ViewType, flow::concepts::NodeType NodeType>
     void RegisterNodeView()
     {
         _constructors.emplace(TypeName_v<NodeType>, NodeViewConstructorHelper<ViewType>);
     }
 
+    /**
+     * @brief Register one view type for several ndoe types.
+     *
+     * @tparam ViewType The node view type to register.
+     * @tparam NodeType The node types to register the view type to.
+     */
     template<NodeViewType ViewType, flow::concepts::NodeType... NodeType>
     void RegisterNodeViews()
     {
         (RegisterNodeView<ViewType, NodeType>(), ...);
     }
 
+    /**
+     * @brief Create a node view for the given node.
+     * @param node The node to create a view for.
+     * @returns The newly created view for the given node.
+     */
     std::shared_ptr<NodeView> CreateNodeView(flow::SharedNode node);
 
+    /**
+     * @brief Register a input field for a given type.
+     * @tparam T The type to register.
+     * @param initial_value The initial value to use for any instance of the registered input field.
+     */
     template<typename T>
     void RegisterInputType(const T& initial_value)
     {
@@ -61,6 +86,10 @@ class ViewFactory : public flow::NodeFactory
         };
     }
 
+    /**
+     * @brief Get the list of registered input field constructors.
+     * @returns A reference to the map of registered input field constructors.
+     */
     const auto& GetRegisteredInputTypes() { return _input_field_contructors; }
 
   private:

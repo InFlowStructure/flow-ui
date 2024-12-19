@@ -10,14 +10,23 @@
 
 FLOW_UI_SUBNAMESPACE_START(widgets)
 
+/**
+ * @brief Input field interface class.
+ */
 class InputInterface : public Widget
 {
   public:
+    virtual ~InputInterface() = default;
+
+    /**
+     * @brief Gets a node data pointer of a newly entered value.
+     * @returns A new node data pointer containing the newly entered value.
+     */
     virtual flow::SharedNodeData GetData() noexcept = 0;
 };
 
 /**
- * Input field widget
+ * @brief Input field widget
  */
 template<typename T>
 class Input : public InputInterface
@@ -25,8 +34,14 @@ class Input : public InputInterface
   public:
     Input(std::string name, const T& initial_value);
 
+    virtual ~Input() = default;
+
     virtual void operator()() noexcept override;
 
+    /**
+     * @brief Gets a node data pointer of a newly entered value.
+     * @returns A new node data pointer containing the newly entered value.
+     */
     virtual flow::SharedNodeData GetData() noexcept override
     {
         auto d = std::move(_data);
@@ -34,6 +49,10 @@ class Input : public InputInterface
         return d;
     }
 
+    /**
+     * @brief Gets the vale that is currently entered into the input field.
+     * @returns The current value in the input field.
+     */
     virtual const T& GetValue() const noexcept { return _value; }
 
   private:

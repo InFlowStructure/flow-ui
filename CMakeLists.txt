@@ -85,9 +85,9 @@ add_library(${PROJECT_NAME} SHARED
   src/Window.cpp
 
   # View source files
-  src/views/LinkView.cpp
-  src/views/NodeView.cpp
+  src/views/ConnectionView.cpp
   src/views/PortView.cpp
+  src/views/NodeView.cpp
 
   # Window source files
   src/windows/GraphWindow.cpp
@@ -131,11 +131,11 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
   flow-core::flow-core
   nlohmann_json::nlohmann_json
   spdlog::spdlog
-  imgui_node_editor
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
   imgui
+  imgui_node_editor
   hello_imgui
   nfd
 )

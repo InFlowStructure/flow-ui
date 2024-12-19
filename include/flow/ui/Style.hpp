@@ -15,7 +15,10 @@
 
 FLOW_UI_NAMESPACE_START
 
-enum class IconType : std::uint8_t
+/**
+ * @brief Enumeration of different types of Port Icons.
+ */
+enum class PortIconType : std::uint8_t
 {
     Flow,
     Circle,
@@ -25,6 +28,9 @@ enum class IconType : std::uint8_t
     Diamond
 };
 
+/**
+ * @brief RGBA Colour type. Values are uint8_t.
+ */
 struct Colour
 {
   public:
@@ -39,9 +45,15 @@ struct Colour
     std::uint8_t A = 255;
 };
 
+/**
+ * @brief Universal style for the Editor.
+ */
 struct Style
 {
   public:
+    /**
+     * @brief Colour flags for windows and widgets.
+     */
     enum class BaseColour : std::uint8_t
     {
         Border,
@@ -104,6 +116,9 @@ struct Style
         WindowBg,
     };
 
+    /**
+     * @brief Colour flags for graph editor.
+     */
     enum class EditorColour : std::uint8_t
     {
         Bg,
@@ -130,7 +145,18 @@ struct Style
   public:
     Style();
 
+    /**
+     * @brief Set port colour for specific port typename.
+     * @param type The name of the type.
+     * @param colour The colour to render the port as.
+     */
     void SetTypeColour(std::string_view type, const Colour& colour);
+
+    /**
+     * @brief Get the colour of a port type by typename.
+     * @tparam T The type of the port.
+     * @returns The colours registered for the given typename.
+     */
     Colour GetTypeColour(std::string_view type) const;
 
     template<typename T>
@@ -139,6 +165,11 @@ struct Style
         return SetTypeColour(flow::TypeName_v<T>, colour);
     }
 
+    /**
+     * @brief Get the colour of a port type by typename.
+     * @tparam T The type of the port.
+     * @returns The colours registered for the given type.
+     */
     template<typename T>
     Colour GetTypeColour() const
     {
@@ -146,32 +177,56 @@ struct Style
     }
 
   public:
+    /// The Icon shapes for different kinds of ports.
     struct
     {
-        IconType Default;
-        IconType Ref;
+        /// Icon shape for default port type.
+        PortIconType Default;
+
+        /// Icon shape for reference port types.
+        PortIconType Ref;
     } PortShapes;
 
+    /// Registered colours for the editor.
     struct
     {
+        /// Registered colours for windows and widgets.
         std::map<BaseColour, Colour> BaseColours;
+
+        /// Registered colours for the graph editor.
         std::map<EditorColour, Colour> EditorColours;
+
+        /// Registered colours for port types.
         std::unordered_map<std::string_view, Colour> TypeColours;
     } Colours;
 
-    float CircleTessellationMaxError;
-    float CurveTessellationTol;
+    /// Window border size.
     float WindowBorderSize;
+
+    /// Size of inner window frame borders.
     float FrameBorderSize;
+
+    /// Rounding for windows tabs.
     float TabRounding;
+
+    /// Border size for windows tabs.
     float TabBarBorderSize;
+
+    /// Padding for table cells.
     struct
     {
+        /// Cell padding width.
         float Width;
+
+        /// Cell padding height.
         float Height;
     } CellPadding;
 };
 
+/**
+ * @brief Get the global style for the editor.
+ * @returns The global style.
+ */
 Style& GetStyle();
 
 FLOW_UI_NAMESPACE_END

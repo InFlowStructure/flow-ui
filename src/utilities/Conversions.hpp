@@ -279,14 +279,12 @@ constexpr Colour to_Colour(const ImVec4& c) noexcept
 
 inline ImGuiStyle& to_ImGuiStyle(const Style& style) noexcept
 {
-    auto& imgui_style                      = ImGui::GetStyle();
-    imgui_style.CircleTessellationMaxError = style.CircleTessellationMaxError;
-    imgui_style.CurveTessellationTol       = style.CurveTessellationTol;
-    imgui_style.WindowBorderSize           = style.WindowBorderSize;
-    imgui_style.FrameBorderSize            = style.FrameBorderSize;
-    imgui_style.TabRounding                = style.TabRounding;
-    imgui_style.TabBarBorderSize           = style.TabBarBorderSize;
-    imgui_style.CellPadding                = ImVec2(style.CellPadding.Width, style.CellPadding.Height);
+    auto& imgui_style            = ImGui::GetStyle();
+    imgui_style.WindowBorderSize = style.WindowBorderSize;
+    imgui_style.FrameBorderSize  = style.FrameBorderSize;
+    imgui_style.TabRounding      = style.TabRounding;
+    imgui_style.TabBarBorderSize = style.TabBarBorderSize;
+    imgui_style.CellPadding      = ImVec2(style.CellPadding.Width, style.CellPadding.Height);
 
     auto& imgui_colours = imgui_style.Colors;
     for (auto& [type, colour] : style.Colours.BaseColours)

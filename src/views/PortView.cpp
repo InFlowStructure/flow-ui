@@ -3,16 +3,16 @@
 
 #include "PortView.hpp"
 
-#include "InputField.hpp"
-#include "LinkView.hpp"
+#include "ConnectionView.hpp"
 #include "ViewFactory.hpp"
+#include "utilities/Builders.hpp"
 #include "utilities/Conversions.hpp"
 #include "utilities/Widgets.hpp"
 
 #include <flow/core/Env.hpp>
 #include <flow/core/NodeData.hpp>
-
 #include <imgui_internal.h>
+#include <imgui_node_editor.h>
 #include <spdlog/spdlog.h>
 
 #include <map>
@@ -20,11 +20,14 @@
 
 FLOW_UI_NAMESPACE_START
 
+using namespace ax;
+namespace ed = ax::NodeEditor;
+
 namespace
 {
-IconType GetIconType(std::string_view type)
+PortIconType GetIconType(std::string_view type)
 {
-    if (type.find("vector") != std::string_view::npos) return IconType::Grid;
+    if (type.find("vector") != std::string_view::npos) return PortIconType::Grid;
 
     if (type.find("*") != std::string_view::npos || type.find("unique_ptr") != std::string_view::npos ||
         type.find("&") != std::string_view::npos)
@@ -44,8 +47,8 @@ void DrawPinIcon(const PortView& pin, bool connected, int alpha)
 }
 } // namespace
 
-PortView::PortView(const ed::NodeId& node_id, std::shared_ptr<Port> port_data,
-                   const std::shared_ptr<ViewFactory>& factory, OnInputFunc input_function, bool show_label)
+PortView::PortView(const std::uint64_t& node_id, std::shared_ptr<Port> port_data,
+                   const std::shared_ptr<ViewFactory>& factory, InputEvent input_function, bool show_label)
     : ID(std::hash<flow::UUID>{}({})), NodeID(node_id), _port{std::move(port_data)},
       _show_label{_port->GetKey() != flow::IndexableName::None && show_label}, OnSetInput{input_function}
 {
@@ -58,7 +61,7 @@ PortView::PortView(const ed::NodeId& node_id, std::shared_ptr<Port> port_data,
 
 void PortView::Draw()
 {
-    if (Kind == PinKind::Input)
+    if (Kind == PortType::Input)
     {
         _builder->Input(ID);
 
@@ -67,7 +70,7 @@ void PortView::Draw()
         DrawLabel();
         ImGui::PopStyleVar();
 
-        if (!IsLinked())
+        if (!IsConnected())
         {
             ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 5.f);
             DrawInput();
@@ -87,7 +90,7 @@ void PortView::Draw()
 
         _builder->EndInput();
     }
-    else if (Kind == PinKind::Output)
+    else if (Kind == PortType::Output)
     {
         _builder->Output(ID);
         ImGui::PushStyleVar(ImGuiStyleVar_Alpha, _alpha);
@@ -96,15 +99,13 @@ void PortView::Draw()
         ImGui::PopStyleVar();
         _builder->EndOutput();
     }
-
-    _is_linked = ed::PinHadAnyLinks(ID);
 }
 
 constexpr std::string_view AnyType = flow::TypeName_v<std::any>;
 
 bool PortView::CanLink(const std::shared_ptr<PortView>& other) const noexcept
 {
-    if (_is_linked && Kind == PinKind::Input || !other || ID == other->ID || Kind == other->Kind ||
+    if (IsConnected() && Kind == PortType::Input || !other || ID == other->ID || Kind == other->Kind ||
         NodeID == other->NodeID)
     {
         return false;
@@ -119,6 +120,7 @@ try
     if (!_input_field) return;
 
     (*_input_field)();
+
     if (auto new_data = _input_field->GetData())
     {
         OnSetInput(Key(), std::move(new_data));
@@ -137,9 +139,11 @@ void PortView::DrawLabel()
     ImGui::TextUnformatted(std::string{Name()}.c_str());
 }
 
-void PortView::DrawIcon(float alpha) { ::flow::ui::DrawPinIcon(*this, IsLinked(), static_cast<int>(alpha * 255)); }
+void PortView::DrawIcon(float alpha) { ::flow::ui::DrawPinIcon(*this, IsConnected(), static_cast<int>(alpha * 255)); }
 
-void PortView::ShowLinkable(const std::shared_ptr<PortView>& new_link_pin)
+void PortView::SetBuilder(std::shared_ptr<utility::NodeBuilder> builder) noexcept { _builder = std::move(builder); }
+
+void PortView::ShowConnectable(const std::shared_ptr<PortView>& new_link_pin)
 {
     _alpha = ImGui::GetStyle().Alpha;
     if (new_link_pin && !CanLink(new_link_pin))

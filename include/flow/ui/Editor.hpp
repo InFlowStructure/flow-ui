@@ -8,7 +8,7 @@
 #include "Style.hpp"
 #include "ViewFactory.hpp"
 #include "Window.hpp"
-#include "views/LinkView.hpp"
+#include "views/ConnectionView.hpp"
 #include "views/NodeView.hpp"
 #include "views/PortView.hpp"
 #include "windows/GraphWindow.hpp"
@@ -21,9 +21,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-
-using namespace ax;
-namespace ed = ax::NodeEditor;
 
 FLOW_UI_NAMESPACE_START
 

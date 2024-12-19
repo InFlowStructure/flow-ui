@@ -28,6 +28,9 @@
 
 FLOW_UI_NAMESPACE_START
 
+using namespace ax;
+namespace ed = ax::NodeEditor;
+
 const std::filesystem::path default_save_path    = FileExplorer::GetDocumentsPath() / "flows";
 const std::filesystem::path default_modules_path = FileExplorer::GetExecutablePath() / "modules";
 
@@ -76,45 +79,12 @@ Editor::Editor(const std::string& initial_file)
     _params.fpsIdling.enableIdling                 = false;
 
     _params.callbacks.SetupImGuiStyle = [&] {
-        auto& imgui_style = ImGui::GetStyle();
+        SetupStyle(GetStyle());
+        utility::to_ImGuiStyle(GetStyle());
 
+        auto& imgui_style                      = ImGui::GetStyle();
         imgui_style.CircleTessellationMaxError = 0.1f;
         imgui_style.CurveTessellationTol       = 0.1f;
-        imgui_style.WindowBorderSize           = 5.f;
-        imgui_style.FrameBorderSize            = 2.f;
-        imgui_style.TabRounding                = 8.f;
-        imgui_style.TabBarBorderSize           = 0.f;
-        imgui_style.CellPadding                = ImVec2(7.f, 7.f);
-
-        auto& imgui_colours = imgui_style.Colors;
-
-        imgui_colours[ImGuiCol_WindowBg]           = ImColor(21, 21, 21);
-        imgui_colours[ImGuiCol_PopupBg]            = ImColor(15, 15, 15, 175);
-        imgui_colours[ImGuiCol_Border]             = ImColor(15, 15, 15);
-        imgui_colours[ImGuiCol_PopupBg]            = imgui_colours[ImGuiCol_WindowBg];
-        imgui_colours[ImGuiCol_FrameBg]            = ImColor(15, 15, 15);
-        imgui_colours[ImGuiCol_MenuBarBg]          = ImColor(21, 21, 21);
-        imgui_colours[ImGuiCol_TitleBg]            = ImColor(21, 21, 21);
-        imgui_colours[ImGuiCol_TitleBgActive]      = imgui_colours[ImGuiCol_TitleBg];
-        imgui_colours[ImGuiCol_Tab]                = ImColor(21, 21, 21);
-        imgui_colours[ImGuiCol_TabUnfocused]       = ImColor(21, 21, 21);
-        imgui_colours[ImGuiCol_TabHovered]         = ImColor(47, 47, 47);
-        imgui_colours[ImGuiCol_TabActive]          = ImColor(3, 98, 195);
-        imgui_colours[ImGuiCol_TabUnfocusedActive] = imgui_colours[ImGuiCol_TabActive];
-        imgui_colours[ImGuiCol_Button]             = ImColor(32, 32, 32);
-        imgui_colours[ImGuiCol_ButtonHovered]      = ImColor(3, 98, 195);
-        imgui_colours[ImGuiCol_ButtonActive]       = ImColor(13, 39, 77);
-        imgui_colours[ImGuiCol_ScrollbarBg]        = ImColor(21, 21, 21);
-        imgui_colours[ImGuiCol_ScrollbarGrab]      = ImColor(86, 86, 86);
-        imgui_colours[ImGuiCol_TableBorderLight]   = ImColor(21, 21, 21);
-        imgui_colours[ImGuiCol_TableBorderStrong]  = ImColor(21, 21, 21);
-        imgui_colours[ImGuiCol_TableRowBg]         = ImColor(36, 36, 36);
-        imgui_colours[ImGuiCol_TableRowBgAlt]      = ImColor(36, 36, 36);
-        imgui_colours[ImGuiCol_Header]             = ImColor(47, 47, 47);
-        imgui_colours[ImGuiCol_HeaderHovered]      = ImColor(50, 50, 50);
-        imgui_colours[ImGuiCol_CheckMark]          = ImColor(3, 98, 195);
-
-        SetupStyle(GetStyle());
     };
     _params.callbacks.LoadAdditionalFonts = [&] {
         auto& config = GetConfig();
@@ -145,7 +115,7 @@ void Editor::Init(const std::string& initial_file)
             for (const auto& id : nodes_to_remove)
             {
                 graph->RemoveNodeByID(id);
-                ed::SetCurrentEditor(gw->GetEditorContext());
+                ed::SetCurrentEditor(std::bit_cast<ed::EditorContext*>(gw->GetEditorContext().get()));
                 ed::DeleteNode(std::hash<UUID>{}(id));
             }
         }
@@ -186,11 +156,6 @@ void Editor::Init(const std::string& initial_file)
     {
         CreateFlow("untitled##0");
     }
-
-    for (auto& window : _windows)
-    {
-        window->Init();
-    }
 }
 
 void Editor::Teardown()
@@ -214,6 +179,7 @@ void Editor::AddWindow(std::shared_ptr<Window> new_window, const std::string& do
     dockable_window.imGuiWindowFlags = ImGuiWindowFlags_NoCollapse;
     dockable_window.isVisible        = show;
 
+    window->Init();
     HelloImGui::AddDockableWindow(std::move(dockable_window));
 }
 
@@ -400,7 +366,7 @@ void Editor::LoadFlow(const std::filesystem::path& filename)
 void Editor::SaveFlow()
 {
     auto graph_window_it = std::find_if(_graph_windows.begin(), _graph_windows.end(), [](auto& gw) {
-        return ed::GetCurrentEditor() == gw.second->GetEditorContext();
+        return ed::GetCurrentEditor() == std::bit_cast<ed::EditorContext*>(gw.second->GetEditorContext().get());
     });
     if (graph_window_it == _graph_windows.end()) return;
 

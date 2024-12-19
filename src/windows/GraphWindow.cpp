@@ -4,6 +4,7 @@
 #include "GraphWindow.hpp"
 
 #include "Config.hpp"
+#include "ConnectionView.hpp"
 #include "NodeView.hpp"
 #include "PortView.hpp"
 #include "ViewFactory.hpp"
@@ -14,6 +15,7 @@
 #include <hello_imgui/icons_font_awesome_6.h>
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <imgui_node_editor.h>
 #include <imgui_node_editor_internal.h>
 #include <imgui_stdlib.h>
 #include <spdlog/spdlog.h>
@@ -23,6 +25,9 @@
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ImVec2, x, y);
 
 FLOW_UI_NAMESPACE_START
+
+using namespace ax;
+namespace ed = ax::NodeEditor;
 
 namespace
 {
@@ -84,6 +89,11 @@ bool AcceptRedo()
 }
 
 bool AcceptComment() { return ImGui::IsKeyChordPressed(ImGuiMod_Alt | ImGuiKey_C); }
+
+ed::Detail::EditorContext* GetEditorDetailContext(const std::unique_ptr<EditorContext>& p)
+{
+    return std::bit_cast<ed::Detail::EditorContext*>(p.get());
+}
 } // namespace
 
 constexpr GraphWindow::ActionType operator&(const GraphWindow::ActionType& a, const GraphWindow::ActionType& b)
@@ -121,9 +131,9 @@ GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph) : Window(graph->Get
         return true;
     };
 
-    _editor_ctx = ed::CreateEditor(&config);
+    _editor_ctx = std::unique_ptr<EditorContext>(std::bit_cast<EditorContext*>(ed::CreateEditor(&config)));
 
-    auto& ed_style           = GetEditorDetailContext()->GetStyle();
+    auto& ed_style           = GetEditorDetailContext(GetEditorContext())->GetStyle();
     ed_style.NodeBorderWidth = 0.5f;
     ed_style.FlowDuration    = 1.f;
 
@@ -145,14 +155,14 @@ GraphWindow::~GraphWindow()
     _item_views.clear();
     _links.clear();
 
-    ed::DestroyEditor(_editor_ctx);
+    ed::DestroyEditor(std::bit_cast<ed::EditorContext*>(_editor_ctx.get()));
 }
 
 void GraphWindow::SetCurrentGraph()
 {
-    if (_editor_ctx != ed::GetCurrentEditor())
+    if (std::bit_cast<ed::EditorContext*>(_editor_ctx.get()) != ed::GetCurrentEditor())
     {
-        ed::SetCurrentEditor(_editor_ctx);
+        ed::SetCurrentEditor(std::bit_cast<ed::EditorContext*>(_editor_ctx.get()));
     }
 }
 
@@ -166,15 +176,13 @@ try
 
     _active = ImGui::Begin(_graph->GetName().c_str(), &_open, window_flags);
 
-    if (_active)
-    {
-        SetCurrentGraph();
-        ed::Begin(_graph->GetName().c_str());
-    }
-    else
+    if (!_active)
     {
         return EndDraw();
     }
+
+    SetCurrentGraph();
+    ed::Begin(_graph->GetName().c_str());
 
     auto cursorTopLeft = ImGui::GetCursorScreenPos();
 
@@ -183,7 +191,7 @@ try
 
     for (auto& [_, item] : _item_views)
     {
-        item->ShowLinkables(_new_link_pin);
+        item->ShowConnectables(_new_link_pin);
         item->Draw();
     }
 
@@ -204,7 +212,8 @@ try
 
     if (_get_popup_location)
     {
-        _open_popup_position = ImGui::GetMousePos();
+        auto pos             = ImGui::GetMousePos();
+        _open_popup_position = {pos.x, pos.y};
         _get_popup_location  = false;
     }
 
@@ -286,7 +295,7 @@ void GraphWindow::EndDraw()
     ImGui::PopStyleVar();
 }
 
-std::shared_ptr<NodeView> GraphWindow::FindNode(ed::NodeId id) const
+std::shared_ptr<NodeView> GraphWindow::FindNode(std::uint64_t id) const
 {
     if (!id) throw std::invalid_argument("Node ID cannot be null");
 
@@ -298,14 +307,14 @@ std::shared_ptr<NodeView> GraphWindow::FindNode(ed::NodeId id) const
     return nullptr;
 }
 
-Link& GraphWindow::FindLink(ed::LinkId id)
+ConnectionView& GraphWindow::FindConnection(std::uint64_t id)
 {
     if (!id) throw std::invalid_argument("Link ID cannot be null");
 
     return _links.at(id);
 }
 
-std::shared_ptr<PortView> GraphWindow::FindPin(ed::PinId id) const
+std::shared_ptr<PortView> GraphWindow::FindPort(std::uint64_t id) const
 {
     if (!id) throw std::invalid_argument("Pin ID cannot be null");
 
@@ -330,7 +339,7 @@ std::shared_ptr<PortView> GraphWindow::FindPin(ed::PinId id) const
     return nullptr;
 }
 
-std::shared_ptr<CommentView> GraphWindow::FindComment(ed::NodeId id) const
+std::shared_ptr<CommentView> GraphWindow::FindComment(std::uint64_t id) const
 {
     if (!id) throw std::invalid_argument("Comment ID cannot be null");
 
@@ -342,24 +351,24 @@ std::shared_ptr<CommentView> GraphWindow::FindComment(ed::NodeId id) const
     return nullptr;
 }
 
-void GraphWindow::DeleteNode(ed::NodeId id)
+void GraphWindow::DeleteNode(std::uint64_t id)
 {
     if (!_item_views.contains(id)) return;
 
     const auto& node = std::dynamic_pointer_cast<NodeView>(_item_views.at(id));
     if (node)
     {
-        std::vector<ed::LinkId> links_to_delete;
+        std::vector<std::uint64_t> links_to_delete;
         for (const auto& [link_id, link] : _links)
         {
             if (std::any_of(node->Inputs.begin(), node->Inputs.end(),
-                            [&, end_pin_id = link.EndPinID](const auto& in) { return in->ID == end_pin_id; }))
+                            [&, end_pin_id = link.EndPortID](const auto& in) { return in->ID == end_pin_id; }))
             {
                 links_to_delete.push_back(link_id);
             }
 
             if (std::any_of(node->Outputs.begin(), node->Outputs.end(),
-                            [&, start_pin_id = link.StartPinID](const auto& out) { return out->ID == start_pin_id; }))
+                            [&, start_pin_id = link.StartPortID](const auto& out) { return out->ID == start_pin_id; }))
             {
                 links_to_delete.push_back(link_id);
             }
@@ -376,7 +385,7 @@ void GraphWindow::DeleteNode(ed::NodeId id)
     _item_views.erase(id);
 }
 
-bool GraphWindow::DeleteLink(ed::LinkId id)
+bool GraphWindow::DeleteLink(std::uint64_t id)
 {
     if (!_links.contains(id))
     {
@@ -385,8 +394,8 @@ bool GraphWindow::DeleteLink(ed::LinkId id)
 
     const auto& link = _links.at(id);
 
-    auto start_pin = FindPin(link.StartPinID);
-    auto end_pin   = FindPin(link.EndPinID);
+    auto start_pin = FindPort(link.StartPortID);
+    auto end_pin   = FindPort(link.EndPortID);
 
     auto start_node = FindNode(start_pin->NodeID);
     auto end_node   = FindNode(end_pin->NodeID);
@@ -413,23 +422,23 @@ void GraphWindow::CreateItems()
         return;
     }
 
-    ed::PinId start_pin_id = 0, end_pin_id = 0;
-    if (ed::QueryNewLink(&start_pin_id, &end_pin_id))
+    std::uint64_t start_pin_id = 0, end_pin_id = 0;
+    if (ed::QueryNewLink(std::bit_cast<ed::PinId*>(&start_pin_id), std::bit_cast<ed::PinId*>(&end_pin_id)))
     {
-        auto start_pin = FindPin(start_pin_id);
-        auto end_pin   = FindPin(end_pin_id);
+        auto start_pin = FindPort(start_pin_id);
+        auto end_pin   = FindPort(end_pin_id);
 
         if (start_pin && end_pin)
         {
             _new_link_pin = start_pin;
 
-            if (start_pin->Kind == PinKind::Input)
+            if (start_pin->Kind == PortType::Input)
             {
                 std::swap(start_pin, end_pin);
                 std::swap(start_pin_id, end_pin_id);
             }
 
-            if (&end_pin == &start_pin || &start_pin->NodeID == &end_pin->NodeID || end_pin->IsLinked())
+            if (&end_pin == &start_pin || &start_pin->NodeID == &end_pin->NodeID || end_pin->IsConnected())
             {
                 ed::RejectNewItem(ImColor(255, 0, 0), 2.0f);
             }
@@ -461,16 +470,16 @@ void GraphWindow::CreateItems()
                         _graph->ConnectNodes(start_node->ID(), start_pin->Name(), end_node->ID(), end_pin->Name());
 
                     _links.emplace(std::hash<flow::UUID>{}(conn->ID()),
-                                   Link{conn->ID(), start_pin->ID, end_pin->ID, start_pin->GetColour()});
+                                   ConnectionView{conn->ID(), start_pin->ID, end_pin->ID, start_pin->GetColour()});
                 }
             }
         }
     }
 
-    ed::PinId pinId = 0;
-    if (ed::QueryNewNode(&pinId))
+    std::uint64_t pinId = 0;
+    if (ed::QueryNewNode(std::bit_cast<ed::PinId*>(&pinId)))
     {
-        _new_link_pin = FindPin(pinId);
+        _new_link_pin = FindPort(pinId);
         if (_new_link_pin)
         {
             DrawLabel("+ Create Node", ImColor(32, 45, 32, 180));
@@ -479,7 +488,7 @@ void GraphWindow::CreateItems()
         if (ed::AcceptNewItem())
         {
             _create_new_node   = true;
-            _new_node_link_pin = FindPin(pinId);
+            _new_node_link_pin = FindPort(pinId);
             _new_link_pin      = nullptr;
             ed::Suspend();
             ImGui::OpenPopup("Create New Node");
@@ -495,16 +504,16 @@ void GraphWindow::CleanupDeadItems()
 {
     if (!ed::BeginDelete()) return ed::EndDelete();
 
-    ed::LinkId link_id = 0;
-    while (ed::QueryDeletedLink(&link_id))
+    std::uint64_t link_id = 0;
+    while (ed::QueryDeletedLink(std::bit_cast<ed::LinkId*>(&link_id)))
     {
         if (!ed::AcceptDeletedItem()) continue;
 
         DeleteLink(link_id);
     }
 
-    ed::NodeId node_id = 0;
-    while (ed::QueryDeletedNode(&node_id))
+    std::uint64_t node_id = 0;
+    while (ed::QueryDeletedNode(std::bit_cast<ed::NodeId*>(&node_id)))
     {
         if (!ed::AcceptDeletedItem()) continue;
 
@@ -626,12 +635,7 @@ void GraphWindow::OnLoadConnection(const flow::SharedConnection& connection)
                                   [&](auto&& pin) { return pin->Name() == connection->EndPortKey(); });
 
     _links.emplace(std::hash<flow::UUID>{}(connection->ID()),
-                   Link{connection->ID(), (*start_pin)->ID, (*end_pin)->ID, (*start_pin)->GetColour()});
-}
-
-ed::Detail::EditorContext* GraphWindow::GetEditorDetailContext() const
-{
-    return reinterpret_cast<ed::Detail::EditorContext*>(_editor_ctx);
+                   ConnectionView{connection->ID(), (*start_pin)->ID, (*end_pin)->ID, (*start_pin)->GetColour()});
 }
 
 flow::SharedNode GraphWindow::CreateNode(const std::string& class_name, const std::string& display_name)
@@ -672,11 +676,11 @@ void GraphWindow::DrawPopupCategory(const std::string& category, const flow::Cat
             _create_new_node = false;
             ImGui::CloseCurrentPopup();
 
-            ed::SetNodePosition(node_view->ID(), _open_popup_position);
+            ed::SetNodePosition(node_view->ID(), {_open_popup_position.x, _open_popup_position.y});
 
             if (auto start_pin = _new_node_link_pin)
             {
-                auto& pins = start_pin->Kind == PinKind::Input ? node_view->Outputs : node_view->Inputs;
+                auto& pins = start_pin->Kind == PortType::Input ? node_view->Outputs : node_view->Inputs;
                 for (auto& pin : pins)
                 {
                     if (!start_pin->CanLink(pin) && (factory->IsConvertible(start_pin->Type(), pin->Type()) ||
@@ -686,7 +690,7 @@ void GraphWindow::DrawPopupCategory(const std::string& category, const flow::Cat
                     }
 
                     auto end_pin = pin;
-                    if (start_pin->Kind == PinKind::Input) std::swap(start_pin, end_pin);
+                    if (start_pin->Kind == PortType::Input) std::swap(start_pin, end_pin);
 
                     const auto& start_node = FindNode(start_pin->NodeID)->Node;
                     const auto& end_node   = FindNode(end_pin->NodeID)->Node;
@@ -694,7 +698,7 @@ void GraphWindow::DrawPopupCategory(const std::string& category, const flow::Cat
                         _graph->ConnectNodes(start_node->ID(), start_pin->Name(), end_node->ID(), end_pin->Name());
 
                     _links.emplace(std::hash<flow::UUID>{}(conn->ID()),
-                                   Link{conn->ID(), start_pin->ID, end_pin->ID, start_pin->GetColour()});
+                                   ConnectionView{conn->ID(), start_pin->ID, end_pin->ID, start_pin->GetColour()});
                     break;
                 }
             }
@@ -727,7 +731,7 @@ json GraphWindow::SaveFlow()
         {
             comments_json.emplace_back(json{
                 {"position", ed::GetNodePosition(ID)},
-                {"size", comment->Size},
+                {"size", ImVec2{comment->Size.Width, comment->Size.Height}},
                 {"comment", comment->Name},
             });
         }
@@ -772,7 +776,8 @@ void GraphWindow::LoadFlow(const json& j)
     const std::vector<json>& comments_json = j["comments"].get_ref<const std::vector<json>&>();
     for (const auto& comment_json : comments_json)
     {
-        auto comment   = std::make_shared<CommentView>(ImVec2(comment_json["size"]),
+        ImVec2 size(comment_json["size"]);
+        auto comment   = std::make_shared<CommentView>(CommentView::CommentSize{size.x, size.y},
                                                      comment_json["comment"].get_ref<const std::string&>());
         auto [view, _] = _item_views.emplace(comment->ID(), std::move(comment));
         ed::SetNodePosition(view->second->ID(), comment_json["position"]);
@@ -792,7 +797,7 @@ json GraphWindow::CopySelection()
 
     auto&& connections = _graph->GetConnections();
     _graph->Visit([&](auto node) {
-        const ed::NodeId id = std::hash<flow::UUID>{}(node->ID());
+        const std::uint64_t id = std::hash<flow::UUID>{}(node->ID());
 
         if (!node_ids.contains(id))
         {
@@ -877,7 +882,7 @@ void GraphWindow::CreateNodesAction(const json& SPDLOG_json)
                                       [&](auto&& pin) { return pin->Name() == connection->EndPortKey(); });
 
         _links.emplace(std::hash<flow::UUID>{}(connection->ID()),
-                       Link{connection->ID(), (*start_pin)->ID, (*end_pin)->ID, (*start_pin)->GetColour()});
+                       ConnectionView{connection->ID(), (*start_pin)->ID, (*end_pin)->ID, (*start_pin)->GetColour()});
     };
 
     new_diff.get_to(*_graph);
@@ -900,11 +905,11 @@ void GraphWindow::DeleteNodesAction(Action& action)
     auto&& nodes = action.Info["nodes"].get_ref<std::vector<json>&>();
     for (auto& node : nodes)
     {
-        ed::NodeId id    = std::hash<flow::UUID>{}(flow::UUID{node["id"]});
+        std::uint64_t id = std::hash<flow::UUID>{}(flow::UUID{node["id"]});
         ImVec2 pos       = ed::GetNodePosition(id);
         node["position"] = pos;
 
-        ed::BreakLinks(id);
+        ed::BreakLinks(static_cast<ed::NodeId>(id));
         ed::DeleteNode(id);
     }
 
@@ -952,7 +957,7 @@ void GraphWindow::CreateComment()
     const auto [min_pos, size] = GetContainerNodeBounds();
     if (min_pos == size || size == ImVec2(0.f, 0.f)) return;
 
-    auto comment   = std::make_shared<CommentView>(size);
+    auto comment   = std::make_shared<CommentView>(CommentView::CommentSize{size.x, size.y});
     auto [view, _] = _item_views.emplace(comment->ID(), std::move(comment));
     ed::SetNodePosition(view->second->ID(), min_pos);
 }

@@ -2,12 +2,13 @@
 
 #include "Config.hpp"
 
-#include <spdlog/spdlog.h>
-
+#include <hello_imgui/hello_imgui.h>
+#include <hello_imgui/internal/image_abstract.h>
 #include <hello_imgui/internal/image_dx11.h>
 #include <hello_imgui/internal/image_metal.h>
 #include <hello_imgui/internal/image_opengl.h>
 #include <hello_imgui/internal/image_vulkan.h>
+#include <spdlog/spdlog.h>
 
 namespace
 {
@@ -76,19 +77,13 @@ flow::ui::Texture::Texture(std::uint8_t* d, int w, int h)
 {
     auto image = CacheImage(d, w, h);
     ID         = image->TextureID();
-    Size       = ImVec2(static_cast<float>(w), static_cast<float>(h));
+    Size       = {w, h};
 }
 
-flow::ui::Texture::Texture(unsigned int texture_id, int w, int h)
-    : Texture(std::bit_cast<ImTextureID>(static_cast<intptr_t>(texture_id)),
-              ImVec2(static_cast<float>(w), static_cast<float>(h)))
-{
-}
-
-flow::ui::Texture::Texture(ImTextureID id, ImVec2 size) : ID{id}, Size{size}
+flow::ui::Texture::Texture(std::uint64_t id, int w, int h) : ID{id}, Size{w, h}
 {
     HelloImGui::ImageAbstractPtr concrete_image = CreateImageFromID(id);
-    concrete_image->Width                       = static_cast<int>(size.x);
-    concrete_image->Height                      = static_cast<int>(size.y);
+    concrete_image->Width                       = w;
+    concrete_image->Height                      = h;
     CachedImages[concrete_image->TextureID()]   = concrete_image;
 }

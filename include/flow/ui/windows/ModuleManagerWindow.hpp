@@ -12,12 +12,24 @@
 
 FLOW_UI_NAMESPACE_START
 
+/**
+ * @brief Windows for displaying available modules and which of them are loaded/unloaded.
+ */
 class ModuleManagerWindow : public Window
 {
   public:
+    /**
+     * @brief Constructs a module manager window with a shared environment and a specified modules path.
+     * @param env The shared environment.
+     * @param modules_path The path to the modules directory.
+     */
     ModuleManagerWindow(std::shared_ptr<Env> env, const std::filesystem::path& modules_path);
+
     virtual ~ModuleManagerWindow() = default;
 
+    /**
+     * @brief Renders the window to the screen.
+     */
     virtual void Draw() override;
 
   private:

@@ -6,7 +6,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_SUBNAMESPACE_START(utility)
 
 void NodeBuilder::Begin(ed::NodeId id)
 {
@@ -239,4 +239,4 @@ void NodeBuilder::Pin(ed::PinId id, ed::PinKind kind) { ed::BeginPin(id, kind); 
 
 void NodeBuilder::EndPin() { ed::EndPin(); }
 
-FLOW_UI_NAMESPACE_END
+FLOW_UI_SUBNAMESPACE_END

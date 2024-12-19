@@ -7,7 +7,7 @@
 
 FLOW_UI_SUBNAMESPACE_START(widgets)
 
-void Icon(const ImVec2& size, IconType type, bool filled, const ImVec4& color, const ImVec4& innerColor)
+void Icon(const ImVec2& size, PortIconType type, bool filled, const ImVec4& color, const ImVec4& innerColor)
 {
     if (ImGui::IsRectVisible(size))
     {
@@ -19,7 +19,8 @@ void Icon(const ImVec2& size, IconType type, bool filled, const ImVec4& color, c
     ImGui::Dummy(size);
 }
 
-void DrawIcon(ImDrawList* drawList, const ImVec2& a, const ImVec2& b, IconType type, bool filled, ImU32 color, ImU32)
+void DrawIcon(ImDrawList* drawList, const ImVec2& a, const ImVec2& b, PortIconType type, bool filled, ImU32 color,
+              ImU32)
 {
     auto rect                 = ImRect(a, b);
     auto rect_x               = rect.Min.x;
@@ -42,7 +43,7 @@ void DrawIcon(ImDrawList* drawList, const ImVec2& a, const ImVec2& b, IconType t
     rect_center_x += rect_offset * 0.5f;
     rect_center.x += rect_offset * 0.5f;
 
-    if (type == IconType::Circle)
+    if (type == PortIconType::Circle)
     {
         const auto c = rect_center;
         const auto r = 0.5f * rect_w / 2.0f;
@@ -51,7 +52,7 @@ void DrawIcon(ImDrawList* drawList, const ImVec2& a, const ImVec2& b, IconType t
         drawList->AddCircle(c, r, color, 12 + extra_segments, 2.0f * outline_scale);
     }
 
-    if (type == IconType::Square)
+    if (type == PortIconType::Square)
     {
         const auto r  = 0.5f * rect_w / 2.0f;
         const auto p0 = rect_center - ImVec2(r, r);
@@ -68,7 +69,7 @@ void DrawIcon(ImDrawList* drawList, const ImVec2& a, const ImVec2& b, IconType t
         }
     }
 
-    if (type == IconType::Grid)
+    if (type == PortIconType::Grid)
     {
         const auto r = 0.5f * rect_w / 2.0f;
         const auto w = ceilf(r / 3.0f);
@@ -97,7 +98,7 @@ void DrawIcon(ImDrawList* drawList, const ImVec2& a, const ImVec2& b, IconType t
         triangleStart = br.x + w + 1.0f / 24.0f * rect_w;
     }
 
-    if (type == IconType::RoundSquare)
+    if (type == PortIconType::RoundSquare)
     {
         const auto r  = 0.5f * rect_w / 2.0f;
         const auto cr = r * 0.5f;
@@ -114,7 +115,7 @@ void DrawIcon(ImDrawList* drawList, const ImVec2& a, const ImVec2& b, IconType t
             drawList->AddRectFilled(ip0, ip1, color, icr, ImDrawFlags_RoundCornersAll);
         }
     }
-    else if (type == IconType::Diamond)
+    else if (type == PortIconType::Diamond)
     {
         const auto r = 0.607f * rect_w / 2.0f - 0.5f;
         const auto c = rect_center;
