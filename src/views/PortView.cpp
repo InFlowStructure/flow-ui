@@ -77,6 +77,8 @@ void PortView::Draw()
             ImGui::PopStyleVar();
         }
 
+        _builder->EndInput();
+
         if (ImGui::IsItemActive() && !_was_active)
         {
             ed::EnableShortcuts(false);
@@ -87,8 +89,6 @@ void PortView::Draw()
             ed::EnableShortcuts(true);
             _was_active = false;
         }
-
-        _builder->EndInput();
     }
     else if (Kind == PortType::Output)
     {

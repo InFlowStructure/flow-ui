@@ -6,7 +6,8 @@
 FLOW_UI_SUBNAMESPACE_START(widgets)
 
 template<typename T>
-Input<T>::Input(std::string name, const T& initial_value) : _name{std::move(name)}, _value{initial_value}
+Input<T>::Input(std::string name, const T& initial_value)
+    : _name{std::move(name)}, _value{initial_value}, _data{MakeNodeData<T>(_value)}
 {
 }
 
