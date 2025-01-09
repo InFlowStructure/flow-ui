@@ -92,6 +92,7 @@ add_library(${PROJECT_NAME} SHARED
   # Window source files
   src/windows/GraphWindow.cpp
   src/windows/ModuleManagerWindow.cpp
+  src/windows/NodeExplorerWindow.cpp
 
   # Widget source files
   src/widgets/InputField.cpp

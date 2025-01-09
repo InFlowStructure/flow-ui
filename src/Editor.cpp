@@ -9,6 +9,7 @@
 #include "Window.hpp"
 #include "utilities/Conversions.hpp"
 #include "windows/ModuleManagerWindow.hpp"
+#include "windows/NodeExplorerWindow.hpp"
 
 #include <flow/core/Node.hpp>
 #include <flow/core/NodeFactory.hpp>
@@ -146,7 +147,14 @@ void Editor::Init(const std::string& initial_file)
     _factory->RegisterInputType<std::chrono::months>(std::chrono::months::zero());
     _factory->RegisterInputType<std::chrono::years>(std::chrono::years::zero());
 
-    AddWindow(std::make_shared<ModuleManagerWindow>(_env, default_modules_path), DefaultDockspace);
+    auto node_explorer = std::make_shared<NodeExplorerWindow>(_env);
+    OnActiveGraphChanged.Bind("NodeExplorer", [window = node_explorer](const auto& g) { window->SetActiveGraph(g); });
+
+    AddDockspace(PropertyDockspace, DefaultDockspace, 0.25f, DockspaceSplitDirection::Left);
+    AddDockspace("PropertySubSpace", PropertyDockspace, 0.5f, DockspaceSplitDirection::Down);
+
+    AddWindow(std::move(node_explorer), "PropertySubSpace");
+    AddWindow(std::make_shared<ModuleManagerWindow>(_env, default_modules_path), "PropertySubSpace");
 
     if (!initial_file.empty())
     {
