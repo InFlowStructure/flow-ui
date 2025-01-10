@@ -10,7 +10,8 @@
 FLOW_UI_NAMESPACE_START
 
 /// Default name of the main dockspace.
-static inline const std::string DefaultDockspace = "MainDockSpace";
+static inline const std::string DefaultDockspace  = "MainDockSpace";
+static inline const std::string PropertyDockspace = "PropertySpace";
 
 /**
  * @brief Base Windows class.

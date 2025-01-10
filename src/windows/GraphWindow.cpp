@@ -29,6 +29,109 @@ FLOW_UI_NAMESPACE_START
 using namespace ax;
 namespace ed = ax::NodeEditor;
 
+void ContextMenu::operator()() noexcept
+{
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(5, 5));
+    ImGui::PushStyleColor(ImGuiCol_PopupBg, IM_COL32(15, 15, 15, 240));
+
+    ImGui::SetNextWindowSizeConstraints(ImVec2(300, 300), ImVec2(315, 400));
+    if (!ImGui::BeginPopup("Create New Node", ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking))
+    {
+        is_focused  = false;
+        node_lookup = "";
+        ImGui::PopStyleColor();
+        ImGui::PopStyleVar();
+        return;
+    }
+
+    if (node_lookup.empty() && !is_focused)
+    {
+        ImGui::SetKeyboardFocusHere(0);
+        is_focused = true;
+    }
+
+    ImGui::BeginHorizontal("search");
+
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 20.f);
+    ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(36, 36, 36, 255));
+
+    ImGui::SetNextItemAllowOverlap();
+    ImGui::InputText("##Search", &node_lookup, 0);
+
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar();
+
+    ImGui::SetCursorPosX((ImGui::GetItemRectMax() - ImGui::GetItemRectMin()).x - 18);
+
+    ImGui::PushFont(std::bit_cast<ImFont*>(GetConfig().IconFont.get()));
+    ImGui::TextUnformatted(ICON_FA_MAGNIFYING_GLASS);
+    ImGui::PopFont();
+
+    ImGui::EndHorizontal();
+
+    auto registered_nodes = _factory->GetCategories();
+
+    if (!node_lookup.empty())
+    {
+        auto partial_match_func = [&](const auto& entry) -> bool {
+            auto [_, class_name]     = entry;
+            std::string display_name = _factory->GetFriendlyName(class_name);
+            std::string filter       = node_lookup;
+
+            const auto& to_lower = [](unsigned char c) { return static_cast<unsigned char>(std::tolower(c)); };
+            std::transform(filter.begin(), filter.end(), filter.begin(), to_lower);
+            std::transform(class_name.begin(), class_name.end(), class_name.begin(), to_lower);
+            std::transform(display_name.begin(), display_name.end(), display_name.begin(), to_lower);
+
+            return std::string_view(display_name).find(filter) == std::string_view::npos &&
+                   std::string_view(class_name).find(filter) == std::string_view::npos;
+        };
+
+        std::erase_if(registered_nodes, partial_match_func);
+    }
+
+    if (ImGui::BeginChild("Categories"))
+    {
+        std::set<std::string> categories;
+        for (const auto& [category, _] : registered_nodes)
+        {
+            categories.insert(category);
+        }
+
+        for (const auto& category : categories)
+        {
+            DrawPopupCategory(category, registered_nodes);
+        }
+
+        ImGui::EndChild();
+    }
+
+    ImGui::EndPopup();
+
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar();
+}
+
+void ContextMenu::DrawPopupCategory(const std::string& category, const flow::CategoryMap& registered_nodes)
+{
+    if (!ImGui::TreeNodeEx(category.c_str(), node_lookup.empty() ? 0 : ImGuiTreeNodeFlags_DefaultOpen)) return;
+
+    auto [begin_it, end_it] = registered_nodes.equal_range(category);
+    for (auto it = begin_it; it != end_it; ++it)
+    {
+        auto class_name   = it->second;
+        auto display_name = _factory->GetFriendlyName(class_name);
+
+        ImGui::Bullet();
+        if (ImGui::MenuItem(display_name.c_str()))
+        {
+            OnSelection(class_name, display_name);
+            break;
+        }
+    }
+    ImGui::TreePop();
+}
+
 namespace
 {
 inline void DrawLabel(const char* label, ImColor color)
@@ -101,7 +204,8 @@ constexpr GraphWindow::ActionType operator&(const GraphWindow::ActionType& a, co
     return static_cast<GraphWindow::ActionType>(static_cast<std::uint8_t>(a) & static_cast<std::uint8_t>(b));
 }
 
-GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph) : Window(graph->GetName()), _graph{std::move(graph)}
+GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph)
+    : Window(graph->GetName()), _graph{std::move(graph)}, node_context_menu{GetEnv()->GetFactory()}
 {
     ed::Config config;
     config.UserPointer      = this;
@@ -133,6 +237,10 @@ GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph) : Window(graph->Get
 
     _editor_ctx = std::unique_ptr<EditorContext>(std::bit_cast<EditorContext*>(ed::CreateEditor(&config)));
 
+    auto& canvas_view    = const_cast<ImGuiEx::CanvasView&>(GetEditorDetailContext(_editor_ctx)->GetView());
+    canvas_view.Origin   = {0, 0};
+    canvas_view.InvScale = 75;
+
     auto& ed_style           = GetEditorDetailContext(GetEditorContext())->GetStyle();
     ed_style.NodeBorderWidth = 0.5f;
     ed_style.FlowDuration    = 1.f;
@@ -146,13 +254,51 @@ GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph) : Window(graph->Get
     });
 
     _graph->Visit([](const auto& node) { return node->Start(); });
+
+    node_context_menu.OnSelection = [this, factory = std::dynamic_pointer_cast<ViewFactory>(GetEnv()->GetFactory())](
+                                        const auto& class_name, const auto& display_name) {
+        CreateNode(class_name, display_name);
+        ImGui::CloseCurrentPopup();
+    };
+
+    _graph->OnNodeAdded.Bind("CreateNodeView", [this](const auto& n) {
+        const auto factory = std::dynamic_pointer_cast<ViewFactory>(GetEnv()->GetFactory());
+        auto node_view     = factory->CreateNodeView(n);
+        _item_views.emplace(node_view->ID(), node_view);
+        ed::SetNodePosition(node_view->ID(), {_open_popup_position.x, _open_popup_position.y});
+
+        if (auto start_pin = _new_node_link_pin)
+        {
+            auto& pins = start_pin->Kind == PortType::Input ? node_view->Outputs : node_view->Inputs;
+            for (auto& pin : pins)
+            {
+                if (!start_pin->CanLink(pin) && !(factory->IsConvertible(start_pin->Type(), pin->Type()) ||
+                                                  factory->IsConvertible(pin->Type(), start_pin->Type())))
+                {
+                    continue;
+                }
+
+                auto end_pin = pin;
+                if (start_pin->Kind == PortType::Input) std::swap(start_pin, end_pin);
+
+                const auto& start_node = FindNode(start_pin->NodeID)->Node;
+                const auto& end_node   = FindNode(end_pin->NodeID)->Node;
+                const auto& conn =
+                    _graph->ConnectNodes(start_node->ID(), start_pin->Name(), end_node->ID(), end_pin->Name());
+
+                _links.emplace(std::hash<flow::UUID>{}(conn->ID()),
+                               ConnectionView{conn->ID(), start_pin->ID, end_pin->ID, start_pin->GetColour()});
+                break;
+            }
+        }
+    });
 }
 
 GraphWindow::~GraphWindow()
 {
     _graph->Visit([](const auto& node) { return node->Stop(); });
+    _graph->Clear();
 
-    _item_views.clear();
     _links.clear();
 
     ed::DestroyEditor(std::bit_cast<ed::EditorContext*>(_editor_ctx.get()));
@@ -187,6 +333,23 @@ try
     auto cursorTopLeft = ImGui::GetCursorScreenPos();
 
     CreateItems();
+
+    if (ImGui::BeginDragDropTarget())
+    {
+        if (auto payload = ImGui::AcceptDragDropPayload("NewNode"))
+        {
+            std::string class_name   = reinterpret_cast<const char*>(payload->Data);
+            std::string display_name = GetEnv()->GetFactory()->GetFriendlyName(class_name);
+
+            _graph->OnNodeAdded.Bind(
+                "SetPos", [](auto&& n) { ed::SetNodePosition(std::hash<UUID>{}(n->ID()), ImGui::GetMousePos()); });
+            CreateNode(class_name, display_name);
+            _graph->OnNodeAdded.Unbind("SetPos");
+        }
+
+        ImGui::EndDragDropTarget();
+    }
+
     CleanupDeadItems();
 
     for (auto& [_, item] : _item_views)
@@ -218,11 +381,8 @@ try
     }
 
     ed::Suspend();
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(5, 5));
-    ImGui::PushStyleColor(ImGuiCol_PopupBg, IM_COL32(15, 15, 15, 240));
-    ShowNodeContextMenu();
-    ImGui::PopStyleColor();
-    ImGui::PopStyleVar();
+    node_context_menu();
+
     ed::Resume();
 
     if (ImGui::IsWindowFocused() && ed::AreShortcutsEnabled())
@@ -487,7 +647,6 @@ void GraphWindow::CreateItems()
 
         if (ed::AcceptNewItem())
         {
-            _create_new_node   = true;
             _new_node_link_pin = FindPort(pinId);
             _new_link_pin      = nullptr;
             ed::Suspend();
@@ -521,86 +680,6 @@ void GraphWindow::CleanupDeadItems()
     }
 
     ed::EndDelete();
-}
-
-void GraphWindow::ShowNodeContextMenu()
-{
-    // FIXME: Bit of a hack.
-    static bool is_focused = false;
-
-    ImGui::SetNextWindowSizeConstraints(ImVec2(300, 300), ImVec2(315, 400));
-    if (!ImGui::BeginPopup("Create New Node", ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking))
-    {
-        _create_new_node = false;
-        is_focused       = false;
-        node_lookup      = "";
-        return;
-    }
-
-    if (node_lookup.empty() && !is_focused)
-    {
-        ImGui::SetKeyboardFocusHere(0);
-        is_focused = true;
-    }
-
-    ImGui::BeginHorizontal("search");
-
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 20.f);
-    ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(36, 36, 36, 255));
-
-    ImGui::SetNextItemAllowOverlap();
-    ImGui::InputText("##Search", &node_lookup, 0);
-
-    ImGui::PopStyleColor();
-    ImGui::PopStyleVar();
-
-    ImGui::SetCursorPos({(ImGui::GetItemRectMax() - ImGui::GetItemRectMin()).x - 18, 4});
-
-    ImGui::PushFont(std::bit_cast<ImFont*>(GetConfig().IconFont.get()));
-    ImGui::TextUnformatted(ICON_FA_MAGNIFYING_GLASS);
-    ImGui::PopFont();
-
-    ImGui::EndHorizontal();
-
-    const auto factory    = GetEnv()->GetFactory();
-    auto registered_nodes = factory->GetCategories();
-
-    if (!node_lookup.empty())
-    {
-        auto partial_match_func = [&](const auto& entry) -> bool {
-            auto [_, class_name]     = entry;
-            std::string display_name = factory->GetFriendlyName(class_name);
-            std::string filter       = node_lookup;
-
-            const auto& to_lower = [](unsigned char c) { return static_cast<unsigned char>(std::tolower(c)); };
-            std::transform(filter.begin(), filter.end(), filter.begin(), to_lower);
-            std::transform(class_name.begin(), class_name.end(), class_name.begin(), to_lower);
-            std::transform(display_name.begin(), display_name.end(), display_name.begin(), to_lower);
-
-            return std::string_view(display_name).find(filter) == std::string_view::npos &&
-                   std::string_view(class_name).find(filter) == std::string_view::npos;
-        };
-
-        std::erase_if(registered_nodes, partial_match_func);
-    }
-
-    if (ImGui::BeginChild("Categories"))
-    {
-        std::set<std::string> categories;
-        for (const auto& [category, _] : registered_nodes)
-        {
-            categories.insert(category);
-        }
-
-        for (const auto& category : categories)
-        {
-            DrawPopupCategory(category, registered_nodes);
-        }
-
-        ImGui::EndChild();
-    }
-
-    ImGui::EndPopup();
 }
 
 void GraphWindow::OnLoadNode(const flow::SharedNode& node, const json& position_json)
@@ -654,58 +733,6 @@ flow::SharedNode GraphWindow::CreateNode(const std::string& class_name, const st
     GetEnv()->AddTask([=] { new_node->Start(); });
 
     return new_node;
-}
-
-void GraphWindow::DrawPopupCategory(const std::string& category, const flow::CategoryMap& registered_nodes)
-{
-    if (!ImGui::TreeNodeEx(category.c_str(), node_lookup.empty() ? 0 : ImGuiTreeNodeFlags_DefaultOpen)) return;
-
-    const auto factory      = std::dynamic_pointer_cast<ViewFactory>(GetEnv()->GetFactory());
-    auto [begin_it, end_it] = registered_nodes.equal_range(category);
-    for (auto it = begin_it; it != end_it; ++it)
-    {
-        auto class_name   = it->second;
-        auto display_name = factory->GetFriendlyName(class_name);
-
-        ImGui::Bullet();
-        if (ImGui::MenuItem(display_name.c_str()))
-        {
-            auto new_node  = CreateNode(class_name, display_name);
-            auto node_view = factory->CreateNodeView(new_node);
-            _item_views.emplace(node_view->ID(), node_view);
-            _create_new_node = false;
-            ImGui::CloseCurrentPopup();
-
-            ed::SetNodePosition(node_view->ID(), {_open_popup_position.x, _open_popup_position.y});
-
-            if (auto start_pin = _new_node_link_pin)
-            {
-                auto& pins = start_pin->Kind == PortType::Input ? node_view->Outputs : node_view->Inputs;
-                for (auto& pin : pins)
-                {
-                    if (!start_pin->CanLink(pin) && (factory->IsConvertible(start_pin->Type(), pin->Type()) ||
-                                                     factory->IsConvertible(pin->Type(), start_pin->Type())))
-                    {
-                        continue;
-                    }
-
-                    auto end_pin = pin;
-                    if (start_pin->Kind == PortType::Input) std::swap(start_pin, end_pin);
-
-                    const auto& start_node = FindNode(start_pin->NodeID)->Node;
-                    const auto& end_node   = FindNode(end_pin->NodeID)->Node;
-                    const auto& conn =
-                        _graph->ConnectNodes(start_node->ID(), start_pin->Name(), end_node->ID(), end_pin->Name());
-
-                    _links.emplace(std::hash<flow::UUID>{}(conn->ID()),
-                                   ConnectionView{conn->ID(), start_pin->ID, end_pin->ID, start_pin->GetColour()});
-                    break;
-                }
-            }
-            break;
-        }
-    }
-    ImGui::TreePop();
 }
 
 json GraphWindow::SaveFlow()

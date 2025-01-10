@@ -4,6 +4,7 @@
 #pragma once
 
 #include "flow/ui/Core.hpp"
+#include "flow/ui/Widget.hpp"
 #include "flow/ui/Window.hpp"
 #include "flow/ui/views/NodeView.hpp"
 
@@ -17,6 +18,27 @@
 #include <vector>
 
 FLOW_UI_NAMESPACE_START
+
+class ContextMenu : public Widget
+{
+  public:
+    ContextMenu(std::shared_ptr<NodeFactory> factory) : _factory(std::move(factory)) {}
+
+    virtual ~ContextMenu() = default;
+
+    virtual void operator()() noexcept override;
+
+  private:
+    void DrawPopupCategory(const std::string& category, const flow::CategoryMap& registered_nodes);
+
+  public:
+    Event<const std::string&, const std::string&> OnSelection;
+
+  private:
+    std::shared_ptr<NodeFactory> _factory;
+    std::string node_lookup;
+    bool is_focused = false;
+};
 
 /**
  * @brief Graph editor window for creating flows.
@@ -180,14 +202,11 @@ class GraphWindow : public Window
 
     void CreateItems();
     void CleanupDeadItems();
-    void ShowNodeContextMenu();
 
     void OnLoadNode(const flow::SharedNode& node, const json& position_json);
     void OnLoadConnection(const flow::SharedConnection& connection);
 
     flow::SharedNode CreateNode(const std::string& class_name, const std::string& display_name);
-
-    void DrawPopupCategory(const std::string& category, const flow::CategoryMap& registered_nodes);
 
   private:
     std::unique_ptr<EditorContext> _editor_ctx;
@@ -203,6 +222,8 @@ class GraphWindow : public Window
     std::shared_ptr<PortView> _new_link_pin      = nullptr;
 
     std::string node_lookup;
+
+    ContextMenu node_context_menu;
 
     struct
     {
