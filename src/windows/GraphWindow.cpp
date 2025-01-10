@@ -255,6 +255,12 @@ GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph)
 
     _graph->Visit([](const auto& node) { return node->Start(); });
 
+    node_context_menu.OnSelection = [this, factory = std::dynamic_pointer_cast<ViewFactory>(GetEnv()->GetFactory())](
+                                        const auto& class_name, const auto& display_name) {
+        CreateNode(class_name, display_name);
+        ImGui::CloseCurrentPopup();
+    };
+
     _graph->OnNodeAdded.Bind("CreateNodeView", [this](const auto& n) {
         const auto factory = std::dynamic_pointer_cast<ViewFactory>(GetEnv()->GetFactory());
         auto node_view     = factory->CreateNodeView(n);
@@ -266,8 +272,8 @@ GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph)
             auto& pins = start_pin->Kind == PortType::Input ? node_view->Outputs : node_view->Inputs;
             for (auto& pin : pins)
             {
-                if (!start_pin->CanLink(pin) && (factory->IsConvertible(start_pin->Type(), pin->Type()) ||
-                                                 factory->IsConvertible(pin->Type(), start_pin->Type())))
+                if (!start_pin->CanLink(pin) && !(factory->IsConvertible(start_pin->Type(), pin->Type()) ||
+                                                  factory->IsConvertible(pin->Type(), start_pin->Type())))
                 {
                     continue;
                 }
@@ -286,9 +292,6 @@ GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph)
             }
         }
     });
-
-    _graph->OnNodeRemoved.Bind("DestroyNodeView",
-                               [this](const auto& n) { _item_views.erase(std::hash<UUID>{}(n->ID())); });
 }
 
 GraphWindow::~GraphWindow()
@@ -338,10 +341,9 @@ try
             std::string class_name   = reinterpret_cast<const char*>(payload->Data);
             std::string display_name = GetEnv()->GetFactory()->GetFriendlyName(class_name);
 
-            auto node = GetEnv()->GetFactory()->CreateNode(class_name, {}, display_name, GetEnv());
             _graph->OnNodeAdded.Bind(
                 "SetPos", [](auto&& n) { ed::SetNodePosition(std::hash<UUID>{}(n->ID()), ImGui::GetMousePos()); });
-            _graph->AddNode(std::move(node));
+            CreateNode(class_name, display_name);
             _graph->OnNodeAdded.Unbind("SetPos");
         }
 
@@ -379,12 +381,6 @@ try
     }
 
     ed::Suspend();
-
-    node_context_menu.OnSelection = [this, factory = std::dynamic_pointer_cast<ViewFactory>(GetEnv()->GetFactory())](
-                                        const auto& class_name, const auto& display_name) {
-        CreateNode(class_name, display_name);
-        ImGui::CloseCurrentPopup();
-    };
     node_context_menu();
 
     ed::Resume();
