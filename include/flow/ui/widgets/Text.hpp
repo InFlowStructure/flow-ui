@@ -48,11 +48,11 @@ class Text : public Widget
     /**
      * @brief Constructs a text widget.
      * @param text The text to display.
-     * @param align The alignment of the text in the window.
      * @param colour The colour of the displayed text.
+     * @param align The alignment of the text in the window.
      */
-    Text(const std::string& text, const Alignment& align = {HorizontalAlignment::Left, VerticalAlignment::Top},
-         const Colour& colour = Colour());
+    Text(const std::string& text, const Colour& colour = Colour(),
+         const Alignment& align = {HorizontalAlignment::Left, VerticalAlignment::Top});
 
     virtual ~Text() = default;
 

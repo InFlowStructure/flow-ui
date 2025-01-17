@@ -3,7 +3,7 @@
 
 FLOW_UI_SUBNAMESPACE_START(widgets)
 
-Text::Text(const std::string& text, const Alignment& align, const Colour& colour)
+Text::Text(const std::string& text, const Colour& colour, const Alignment& align)
     : _text(text), _colour(colour), _align(align)
 {
 }

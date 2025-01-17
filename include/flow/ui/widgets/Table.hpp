@@ -21,7 +21,7 @@ class Table : public Widget
      * @param name The name of the table.
      * @param columns The number of columns.
      */
-    Table(const std::string& name, std::size_t columns);
+    Table(const std::string& name, std::size_t columns, std::size_t outer_width = 0, std::size_t outer_height = 0);
 
     virtual ~Table() = default;
 
@@ -38,7 +38,9 @@ class Table : public Widget
 
   private:
     std::string _name;
-    std::size_t _columns = 0;
+    std::size_t _columns      = 0;
+    std::size_t _outer_width  = 0;
+    std::size_t _outer_height = 0;
     std::vector<std::shared_ptr<Widget>> _widgets;
 };
 
