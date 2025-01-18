@@ -9,16 +9,6 @@
 
 FLOW_UI_NAMESPACE_START
 
-ShortcutsWindow::ShortcutsWindow() : Window("Shortcuts") {}
-
-#ifdef FLOW_APPLE
-const std::string ctrl_key_str = "Cmd";
-const std::string alt_key_str  = "Option";
-#else
-const std::string ctrl_key_str = "Ctrl";
-const std::string alt_key_str  = "Alt";
-#endif
-
 std::shared_ptr<widgets::Text> ShorcutTextBuilder(std::initializer_list<ImGuiKey> keys)
 {
     std::string text = "";
@@ -38,42 +28,37 @@ void AddShortcutText(widgets::Table& table, const std::string& name, std::initia
     table.AddEntry(ShorcutTextBuilder(keys));
 }
 
+auto window_shortcuts = widgets::Table("Window Shortcuts", 2);
+auto graph_shortcuts  = widgets::Table("Graph Shortcuts", 2);
+
+ShortcutsWindow::ShortcutsWindow() : Window("Shortcuts")
+{
+    AddShortcutText(window_shortcuts, "New Flow", {ImGuiKey_LeftCtrl, ImGuiKey_N});
+    AddShortcutText(window_shortcuts, "Open Flow", {ImGuiKey_LeftCtrl, ImGuiKey_O});
+    AddShortcutText(window_shortcuts, "Save Flow", {ImGuiKey_LeftCtrl, ImGuiKey_S});
+    AddShortcutText(window_shortcuts, "Save Flow As", {ImGuiKey_LeftCtrl, ImGuiKey_LeftAlt, ImGuiKey_S});
+    AddShortcutText(window_shortcuts, "Close Flow", {ImGuiKey_LeftCtrl, ImGuiKey_W});
+
+    AddShortcutText(graph_shortcuts, "Break Link", {ImGuiKey_LeftAlt, ImGuiKey_MouseLeft});
+    AddShortcutText(graph_shortcuts, "Copy", {ImGuiKey_LeftCtrl, ImGuiKey_C});
+    AddShortcutText(graph_shortcuts, "Cut (Experimental)", {ImGuiKey_LeftCtrl, ImGuiKey_X}, Colour(244, 129, 36));
+    AddShortcutText(graph_shortcuts, "Duplicate", {ImGuiKey_LeftCtrl, ImGuiKey_D});
+    AddShortcutText(graph_shortcuts, "Paste", {ImGuiKey_LeftCtrl, ImGuiKey_V});
+    AddShortcutText(graph_shortcuts, "Delete Selection", {ImGuiKey_Delete});
+    AddShortcutText(graph_shortcuts, "Focus", {ImGuiKey_F});
+    AddShortcutText(graph_shortcuts, "Undo (Experimental)", {ImGuiKey_LeftCtrl, ImGuiKey_Z}, Colour(244, 129, 36));
+    AddShortcutText(graph_shortcuts, "Redo (Experimental)", {ImGuiKey_LeftCtrl, ImGuiKey_Y}, Colour(244, 129, 36));
+}
+
 void ShortcutsWindow::Draw()
 {
-    auto window_shortcuts_table = widgets::Table("Shortcuts", 2);
-
-    AddShortcutText(window_shortcuts_table, "New Window", {ImGuiKey_LeftCtrl, ImGuiKey_N});
-    AddShortcutText(window_shortcuts_table, "Close Window", {ImGuiKey_LeftCtrl, ImGuiKey_W});
-
-    auto graph_shortcuts_table = widgets::Table("Shortcuts", 2);
-
-    AddShortcutText(graph_shortcuts_table, "Break Link", {ImGuiKey_LeftAlt, ImGuiKey_MouseLeft});
-
-    AddShortcutText(graph_shortcuts_table, "Copy", {ImGuiKey_LeftCtrl, ImGuiKey_C});
-
-    AddShortcutText(graph_shortcuts_table, "Cut (Experimental)", {ImGuiKey_LeftCtrl, ImGuiKey_X}, Colour(244, 129, 36));
-
-    AddShortcutText(graph_shortcuts_table, "Paste", {ImGuiKey_LeftCtrl, ImGuiKey_V});
-
-    AddShortcutText(graph_shortcuts_table, "Duplicate", {ImGuiKey_LeftCtrl, ImGuiKey_D});
-
-    AddShortcutText(graph_shortcuts_table, "Undo (Experimental)", {ImGuiKey_LeftCtrl, ImGuiKey_Z},
-                    Colour(244, 129, 36));
-
-    AddShortcutText(graph_shortcuts_table, "Redo (Experimental)", {ImGuiKey_LeftCtrl, ImGuiKey_Y},
-                    Colour(244, 129, 36));
-
-    AddShortcutText(graph_shortcuts_table, "Delete Selection", {ImGuiKey_Delete});
-
-    AddShortcutText(graph_shortcuts_table, "Focus", {ImGuiKey_F});
-
     widgets::Text("Window Shortcuts")();
     ImGui::Separator();
-    window_shortcuts_table();
+    window_shortcuts();
 
     widgets::Text("Graph Shortcuts")();
     ImGui::Separator();
-    graph_shortcuts_table();
+    graph_shortcuts();
 }
 
 FLOW_UI_NAMESPACE_END
