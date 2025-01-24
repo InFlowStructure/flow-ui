@@ -301,7 +301,13 @@ GraphWindow::~GraphWindow()
 
     _links.clear();
 
+    if (ed::GetCurrentEditor() == std::bit_cast<ed::EditorContext*>(_editor_ctx.get()))
+    {
+        ed::SetCurrentEditor(nullptr);
+    }
+
     ed::DestroyEditor(std::bit_cast<ed::EditorContext*>(_editor_ctx.get()));
+    _editor_ctx.reset();
 }
 
 void GraphWindow::SetCurrentGraph()
