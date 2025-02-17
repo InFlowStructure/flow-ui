@@ -4,6 +4,7 @@
 #pragma once
 
 #include "Core.hpp"
+#include "FileExplorer.hpp"
 #include "Style.hpp"
 
 #include <flow/core/Concepts.hpp>
@@ -16,6 +17,7 @@
 #include <imgui_stdlib.h>
 
 #include <chrono>
+#include <filesystem>
 #include <stdexcept>
 
 FLOW_UI_SUBNAMESPACE_START(widgets)
@@ -208,6 +210,18 @@ template<>
 inline bool InputField<std::chrono::years>(std::string_view name, std::chrono::years& value, ImGuiInputTextFlags flags)
 {
     return InputChrono(name, value, flags);
+}
+
+template<>
+inline bool InputField<std::filesystem::path>(std::string_view, std::filesystem::path& value, ImGuiInputTextFlags)
+{
+    if (ImGui::Button("Select File"))
+    {
+        value = FileExplorer::Load(FileExplorer::GetDocumentsPath(), "", "*");
+        return true;
+    }
+
+    return false;
 }
 
 FLOW_UI_SUBNAMESPACE_END

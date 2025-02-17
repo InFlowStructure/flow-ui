@@ -3,6 +3,8 @@
 
 #include <imgui.h>
 
+#include <filesystem>
+
 FLOW_UI_SUBNAMESPACE_START(widgets)
 
 template<typename T>
@@ -44,5 +46,6 @@ template class Input<std::chrono::days>;
 template class Input<std::chrono::weeks>;
 template class Input<std::chrono::months>;
 template class Input<std::chrono::years>;
+template class Input<std::filesystem::path>;
 
 FLOW_UI_SUBNAMESPACE_END

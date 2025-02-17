@@ -136,7 +136,7 @@ void PortView::DrawLabel()
     if (!_show_label) return;
 
     ImGui::AlignTextToFramePadding();
-    ImGui::TextUnformatted(std::string{Name()}.c_str());
+    ImGui::TextUnformatted(std::string{Name().substr(0, Name().find("##"))}.c_str());
 }
 
 void PortView::DrawIcon(float alpha) { ::flow::ui::DrawPinIcon(*this, IsConnected(), static_cast<int>(alpha * 255)); }
