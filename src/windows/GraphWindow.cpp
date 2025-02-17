@@ -205,7 +205,7 @@ constexpr GraphWindow::ActionType operator&(const GraphWindow::ActionType& a, co
 }
 
 GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph)
-    : Window(graph->GetName()), _graph{std::move(graph)}, node_context_menu{GetEnv()->GetFactory()}
+    : Window(graph->GetName()), _graph{std::move(graph)}, node_creation_context_menu{GetEnv()->GetFactory()}
 {
     ed::Config config;
     config.UserPointer      = this;
@@ -255,11 +255,12 @@ GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph)
 
     _graph->Visit([](const auto& node) { return node->Start(); });
 
-    node_context_menu.OnSelection = [this, factory = std::dynamic_pointer_cast<ViewFactory>(GetEnv()->GetFactory())](
-                                        const auto& class_name, const auto& display_name) {
-        CreateNode(class_name, display_name);
-        ImGui::CloseCurrentPopup();
-    };
+    node_creation_context_menu.OnSelection =
+        [this, factory = std::dynamic_pointer_cast<ViewFactory>(GetEnv()->GetFactory())](const auto& class_name,
+                                                                                         const auto& display_name) {
+            CreateNode(class_name, display_name);
+            ImGui::CloseCurrentPopup();
+        };
 
     _graph->OnNodeAdded.Bind("CreateNodeView", [this](const auto& n) {
         const auto factory = std::dynamic_pointer_cast<ViewFactory>(GetEnv()->GetFactory());
@@ -371,7 +372,19 @@ try
 
     ImGui::SetCursorScreenPos(cursorTopLeft);
     ed::Suspend();
-    if (ed::ShowBackgroundContextMenu())
+
+    static ed::NodeId context_node_id = 0;
+    static ed::PinId context_pin_id   = 0;
+
+    if (ed::ShowNodeContextMenu(&context_node_id))
+    {
+        ImGui::OpenPopup("Node Context Menu");
+    }
+    else if (ed::ShowPinContextMenu(&context_pin_id))
+    {
+        ImGui::OpenPopup("Pin Context Menu");
+    }
+    else if (ed::ShowBackgroundContextMenu())
     {
         ImGui::OpenPopup("Create New Node");
         _get_popup_location = true;
@@ -387,7 +400,77 @@ try
     }
 
     ed::Suspend();
-    node_context_menu();
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10, 10));
+    ImGui::PushStyleColor(ImGuiCol_PopupBg, IM_COL32(15, 15, 15, 240));
+    if (ImGui::BeginPopup("Node Context Menu"))
+    {
+        auto node = FindNode(context_node_id.Get());
+
+        ImGui::PushFont(std::bit_cast<ImFont*>(GetConfig().NodeHeaderFont.get()));
+        ImGui::TextUnformatted("Node Context Menu");
+        ImGui::PopFont();
+
+        ImGui::Separator();
+
+        if (node)
+        {
+            ed::SelectNode(context_node_id);
+            if (ImGui::MenuItem("Comment"))
+            {
+                CreateComment();
+            }
+
+            ImGui::Separator();
+
+            if (ed::HasAnyLinks(context_node_id))
+            {
+                if (ImGui::MenuItem("Break Links"))
+                {
+                    ed::BreakLinks(context_node_id);
+                }
+
+                ImGui::Separator();
+            }
+        }
+        else [[unlikely]]
+        {
+            ImGui::Text("Unknown node: %p", context_node_id.AsPointer());
+        }
+
+        if (ImGui::MenuItem("Delete"))
+        {
+            ed::DeleteNode(context_node_id);
+        }
+
+        ImGui::EndPopup();
+    }
+
+    if (ImGui::BeginPopup("Pin Context Menu"))
+    {
+        auto pin = FindPort(context_pin_id.Get());
+
+        ImGui::TextUnformatted("Pin Context Menu");
+        ImGui::Separator();
+        if (pin)
+        {
+            if (ed::HasAnyLinks(context_pin_id) && ImGui::MenuItem("Break Link(s)"))
+            {
+                ed::BreakLinks(context_pin_id);
+            }
+        }
+        else [[unlikely]]
+        {
+            ImGui::Text("Unknown pin: %p", context_pin_id.AsPointer());
+        }
+
+        ImGui::EndPopup();
+    }
+
+    node_creation_context_menu();
+
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar();
 
     ed::Resume();
 
@@ -810,8 +893,9 @@ void GraphWindow::LoadFlow(const json& j)
     for (const auto& comment_json : comments_json)
     {
         ImVec2 size(comment_json["size"]);
-        auto comment   = std::make_shared<CommentView>(CommentView::CommentSize{size.x, size.y},
+        auto comment = std::make_shared<CommentView>(CommentView::CommentSize{size.x, size.y},
                                                      comment_json["comment"].get_ref<const std::string&>());
+
         auto [view, _] = _item_views.emplace(comment->ID(), std::move(comment));
         ed::SetNodePosition(view->second->ID(), comment_json["position"]);
     }

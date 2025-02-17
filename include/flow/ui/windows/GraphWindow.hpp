@@ -223,7 +223,7 @@ class GraphWindow : public Window
 
     std::string node_lookup;
 
-    ContextMenu node_context_menu;
+    ContextMenu node_creation_context_menu;
 
     struct
     {
