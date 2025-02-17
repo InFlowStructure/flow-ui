@@ -147,6 +147,7 @@ void Editor::Init(const std::string& initial_file)
     _factory->RegisterInputType<std::chrono::days>(std::chrono::days::zero());
     _factory->RegisterInputType<std::chrono::months>(std::chrono::months::zero());
     _factory->RegisterInputType<std::chrono::years>(std::chrono::years::zero());
+    _factory->RegisterInputType<std::filesystem::path>(std::filesystem::path(""));
 
     auto node_explorer = std::make_shared<NodeExplorerWindow>(_env);
     OnActiveGraphChanged.Bind("NodeExplorer", [window = node_explorer](const auto& g) { window->SetActiveGraph(g); });
