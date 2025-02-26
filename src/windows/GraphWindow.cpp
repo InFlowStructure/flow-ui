@@ -237,10 +237,6 @@ GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph)
 
     _editor_ctx = std::unique_ptr<EditorContext>(std::bit_cast<EditorContext*>(ed::CreateEditor(&config)));
 
-    auto& canvas_view    = const_cast<ImGuiEx::CanvasView&>(GetEditorDetailContext(_editor_ctx)->GetView());
-    canvas_view.Origin   = {0, 0};
-    canvas_view.InvScale = 75;
-
     auto& ed_style           = GetEditorDetailContext(GetEditorContext())->GetStyle();
     ed_style.NodeBorderWidth = 0.5f;
     ed_style.FlowDuration    = 1.f;
@@ -371,6 +367,7 @@ try
     }
 
     ImGui::SetCursorScreenPos(cursorTopLeft);
+
     ed::Suspend();
 
     static ed::NodeId context_node_id = 0;
@@ -390,6 +387,7 @@ try
         _get_popup_location = true;
         _new_node_link_pin  = nullptr;
     }
+
     ed::Resume();
 
     if (_get_popup_location)

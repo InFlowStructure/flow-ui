@@ -98,6 +98,116 @@ struct PreviewNodeView : NodeView
     }
 };
 
+template<typename F>
+struct FunctionTraits;
+
+template<typename R, typename... Args>
+struct FunctionTraits<R(Args...)>
+{
+    using ReturnType = std::invoke_result_t<R(Args...), Args...>;
+    using ArgTypes   = std::tuple<Args...>;
+};
+
+template<typename F, std::add_pointer_t<F> Func>
+class FunctionWrapperNode : public Node
+{
+  protected:
+    using FuncTraits = FunctionTraits<F>;
+    using OutputType = typename FuncTraits::ReturnType;
+
+  private:
+    template<int... Idx>
+    void AddInputs(std::integer_sequence<int, Idx...>)
+    {
+        (AddInput<std::tuple_element_t<Idx, typename FuncTraits::ArgTypes>>(
+             {input_names[Idx] = "in" + std::to_string(Idx)}, ""),
+         ...);
+    }
+
+    template<int... Idx>
+    auto GetInputs(std::integer_sequence<int, Idx...>)
+    {
+        return std::make_tuple(
+            GetInputData<std::tuple_element_t<Idx, typename FuncTraits::ArgTypes>>(IndexableName{input_names[Idx]})...);
+    }
+
+    template<int... Idx>
+    json SaveInputs(std::integer_sequence<int, Idx...>) const
+    {
+        json inputs_json;
+        (
+            [&, this] {
+                const auto& key = input_names[Idx];
+                if (auto x = GetInputData<std::tuple_element_t<Idx, typename FuncTraits::ArgTypes>>(IndexableName{key}))
+                {
+                    inputs_json[key] = x->Get();
+                }
+            }(),
+            ...);
+
+        return inputs_json;
+    }
+
+    template<int... Idx>
+    void RestoreInputs(json& j, std::integer_sequence<int, Idx...>)
+    {
+        (
+            [&, this] {
+                const auto& key = input_names[Idx];
+                if (!j.contains(key))
+                {
+                    return;
+                }
+
+                SetInputData(IndexableName{key},
+                             MakeNodeData<std::tuple_element_t<Idx, typename FuncTraits::ArgTypes>>(j[key]), false);
+            }(),
+            ...);
+    }
+
+  public:
+    explicit FunctionWrapperNode(const std::string& uuid_str, const std::string& name, std::shared_ptr<Env> env)
+        : Node(uuid_str, TypeName_v<FunctionWrapperNode<F, Func>>, name, std::move(env)), _func{Func}
+    {
+        AddInputs(std::make_integer_sequence<int, std::tuple_size_v<FuncTraits::ArgTypes>>{});
+
+        AddOutput<OutputType>("result", "result");
+    }
+
+    virtual ~FunctionWrapperNode() = default;
+
+  protected:
+    void Compute() override
+    {
+        auto inputs = GetInputs(std::make_integer_sequence<int, std::tuple_size_v<FuncTraits::ArgTypes>>{});
+
+        if (std::apply([](auto&&... args) { return (!args || ...); }, inputs)) return;
+
+        auto result = std::apply([&](auto&&... args) { return _func(args->Get()...); }, inputs);
+        this->SetOutputData("result", MakeNodeData(std::move(result)));
+    }
+
+    json SaveInputs() const override
+    {
+        return SaveInputs(std::make_integer_sequence<int, std::tuple_size_v<FuncTraits::ArgTypes>>{});
+    }
+
+    void RestoreInputs(const json& j) override
+    {
+        RestoreInputs(const_cast<json&>(j), std::make_integer_sequence<int, std::tuple_size_v<FuncTraits::ArgTypes>>{});
+    }
+
+  private:
+    std::add_pointer_t<F> _func;
+    std::array<std::string, std::tuple_size_v<typename FuncTraits::ArgTypes>> input_names{""};
+};
+
+#ifndef FLOW_WINDOWS
+#define WRAP_FUNCTION_IN_NODE_TYPE(func, ...) FunctionWrapperNode<decltype(func), func __VA_OPT__(, ) __VA_ARGS__>
+#else
+#define WRAP_FUNCTION_IN_NODE_TYPE(func, ...) FunctionWrapperNode<decltype(func), func, __VA_ARGS__>
+#endif
+
 FLOW_UI_NAMESPACE_END
 
 struct PreviewNode : public flow::Node
