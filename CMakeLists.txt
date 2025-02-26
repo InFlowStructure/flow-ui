@@ -29,7 +29,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(cmake/CPM.cmake)
 
-CPMAddPackage("gh:InFlowStructure/flow-core#ae2f12e")
+CPMAddPackage("gh:InFlowStructure/flow-core@1.2.0")
 CPMAddPackage("gh:btzy/nativefiledialog-extended@1.2.1")
 
 FetchContent_Declare(
@@ -54,7 +54,7 @@ if (UNIX)
     add_compile_options(-fPIC)
 endif()
 
-CPMAddPackage("gh:GhostofCookie/hello_imgui#bb61203")
+CPMAddPackage("gh:GhostofCookie/hello_imgui#0e0adb7")
 
 include(FetchContent)
 include(cmake/add_libs.cmake)
