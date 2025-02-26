@@ -19,40 +19,13 @@ function(add_imgui imgui_dir)
             target_compile_options(imgui PRIVATE "/wd4297")
         endif()
 
-        if(PROJECT_IS_TOP_LEVEL AND NOT SKBUILD)
-            install(TARGETS imgui DESTINATION ./lib/)
-        endif()
-
-        if(IMGUI_BUNDLE_BUILD_PYTHON)
-            target_compile_definitions(imgui PUBLIC ImTextureID=int)
-        endif()
-
         if (UNIX)
             target_compile_options(imgui PUBLIC -fPIC)
         endif()
+
         hello_imgui_msvc_target_group_sources(imgui)
     endif()
 endfunction()
-
-function (add_hello_imgui)
-    if (UNIX)
-        add_compile_options(-fPIC)
-    endif()
-
-    set(BUILD_SHARED_LIBS OFF)
-    set(imgui_dir ${CMAKE_CURRENT_LIST_DIR}/imgui)
-    add_imgui(${imgui_dir})
-
-    set(HELLOIMGUI_BUILD_IMGUI OFF CACHE BOOL "" FORCE)
-    set(HELLOIMGUI_IMGUI_SOURCE_DIR ${imgui_dir} CACHE STRING "" FORCE)
-
-    add_subdirectory(hello_imgui)
-
-    if (WIN32)
-        set_target_properties(hello_imgui PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
-    endif()
-endfunction()
-
 
 function(add_simple_external_library_with_sources lib_target_name lib_folder)
     file(GLOB lib_sources ${lib_folder}/*.cpp ${lib_folder}/*.h)

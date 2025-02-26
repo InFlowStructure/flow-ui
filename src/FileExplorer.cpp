@@ -90,7 +90,6 @@ std::filesystem::path FileExplorer::Save(std::filesystem::path save_path, std::s
 
 std::filesystem::path FileExplorer::GetHomePath()
 {
-
 #ifdef FLOW_WINDOWS
     const char* dir = std::getenv("USERPROFILE");
 #else

@@ -16,40 +16,55 @@ elseif(MSVC)
 endif()
 
 # -----------------------------------------------------------------------------
-# Options
-# -----------------------------------------------------------------------------
-
-option(flow-ui_USE_EXTERNAL_FLOW_CORE "Use an external Flow Core library" OFF)
-
-# -----------------------------------------------------------------------------
 # Dependencies
 # -----------------------------------------------------------------------------
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-
-find_package(nlohmann_json CONFIG QUIET)
-if (NOT nlohmann_json_FOUND)
-  include(FetchContent)
-  FetchContent_Declare(
-    nlohmann_json OVERRIDE_FIND_PACKAGE
-    URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
-  )
-  FetchContent_MakeAvailable(nlohmann_json)
-endif()
-
-if (flow-ui_USE_EXTERNAL_FLOW_CORE)
-  find_package(flow-core REQUIRED)
-endif()
-
 if(flow-ui_INSTALL)
-  if (NOT flow-ui_USE_EXTERNAL_FLOW_CORE)
-    set(flow-core_INSTALL ON CACHE BOOL "" FORCE)
-  endif()
+  set(flow-core_INSTALL ON CACHE BOOL "" FORCE)
   set(SPDLOG_INSTALL ON CACHE BOOL "" FORCE)
   set(NFD_INSTALL ON CACHE BOOL "" FORCE)
 endif()
 
-add_subdirectory(third_party)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+include(cmake/CPM.cmake)
+
+CPMAddPackage("gh:InFlowStructure/flow-core@1.2.0")
+CPMAddPackage("gh:btzy/nativefiledialog-extended@1.2.1")
+
+FetchContent_Declare(
+  imgui
+  GIT_REPOSITORY https://github.com/pthom/imgui.git
+  GIT_TAG        imgui_bundle
+)
+FetchContent_Declare(
+  imgui_node_editor
+  GIT_REPOSITORY https://github.com/pthom/imgui-node-editor.git
+  GIT_TAG        imgui_bundle
+)
+FetchContent_MakeAvailable(imgui imgui_node_editor)
+
+set(HELLOIMGUI_DOWNLOAD_FREETYPE_IF_NEEDED OFF CACHE BOOL "")
+set(HELLOIMGUI_USE_FREETYPE OFF CACHE BOOL "")
+set(HELLOIMGUI_USE_EXTERNAL_JSON ON CACHE BOOL "")
+set(HELLOIMGUI_BUILD_IMGUI OFF CACHE BOOL "" FORCE)
+set(HELLOIMGUI_IMGUI_SOURCE_DIR ${imgui_SOURCE_DIR} CACHE STRING "" FORCE)
+
+if (UNIX)
+    add_compile_options(-fPIC)
+endif()
+
+CPMAddPackage("gh:GhostofCookie/hello_imgui#0e0adb7")
+
+include(FetchContent)
+include(cmake/add_libs.cmake)
+include(${hello_imgui_SOURCE_DIR}/hello_imgui_cmake/msvc/msvc_target_group.cmake)
+
+add_imgui(${imgui_SOURCE_DIR})
+add_simple_external_library_with_sources(imgui_node_editor ${imgui_node_editor_SOURCE_DIR})
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+CPMAddPackage("gh:gabime/spdlog@1.15.1")
 
 # -----------------------------------------------------------------------------
 # Library
@@ -93,6 +108,7 @@ add_library(${PROJECT_NAME} SHARED
   src/windows/GraphWindow.cpp
   src/windows/ModuleManagerWindow.cpp
   src/windows/NodeExplorerWindow.cpp
+  src/windows/PropertyWindow.cpp
   src/windows/ShortcutsWindow.cpp
 
   # Widget source files
@@ -142,6 +158,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   nfd
 )
 target_compile_definitions(${PROJECT_NAME} PUBLIC IMGUI_DEFINE_MATH_OPERATORS)
+
+add_subdirectory(programs/editor)
 
 # -----------------------------------------------------------------------------
 # Install
