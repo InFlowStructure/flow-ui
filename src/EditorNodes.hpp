@@ -169,7 +169,7 @@ class FunctionWrapperNode : public Node
     explicit FunctionWrapperNode(const std::string& uuid_str, const std::string& name, std::shared_ptr<Env> env)
         : Node(uuid_str, TypeName_v<FunctionWrapperNode<F, Func>>, name, std::move(env)), _func{Func}
     {
-        AddInputs(std::make_integer_sequence<int, std::tuple_size_v<FuncTraits::ArgTypes>>{});
+        AddInputs(std::make_integer_sequence<int, std::tuple_size_v<typename FuncTraits::ArgTypes>>{});
 
         AddOutput<OutputType>("result", "result");
     }
@@ -179,7 +179,7 @@ class FunctionWrapperNode : public Node
   protected:
     void Compute() override
     {
-        auto inputs = GetInputs(std::make_integer_sequence<int, std::tuple_size_v<FuncTraits::ArgTypes>>{});
+        auto inputs = GetInputs(std::make_integer_sequence<int, std::tuple_size_v<typename FuncTraits::ArgTypes>>{});
 
         if (std::apply([](auto&&... args) { return (!args || ...); }, inputs)) return;
 
@@ -189,12 +189,13 @@ class FunctionWrapperNode : public Node
 
     json SaveInputs() const override
     {
-        return SaveInputs(std::make_integer_sequence<int, std::tuple_size_v<FuncTraits::ArgTypes>>{});
+        return SaveInputs(std::make_integer_sequence<int, std::tuple_size_v<typename FuncTraits::ArgTypes>>{});
     }
 
     void RestoreInputs(const json& j) override
     {
-        RestoreInputs(const_cast<json&>(j), std::make_integer_sequence<int, std::tuple_size_v<FuncTraits::ArgTypes>>{});
+        RestoreInputs(const_cast<json&>(j),
+                      std::make_integer_sequence<int, std::tuple_size_v<typename FuncTraits::ArgTypes>>{});
     }
 
   private:

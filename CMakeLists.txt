@@ -30,7 +30,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(cmake/CPM.cmake)
 
 CPMAddPackage("gh:InFlowStructure/flow-core#ae2f12e")
-CPMAddPackage("gh:gabime/spdlog@1.15.1")
 CPMAddPackage("gh:btzy/nativefiledialog-extended@1.2.1")
 
 FetchContent_Declare(
@@ -45,12 +44,16 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(imgui imgui_node_editor)
 
-
 set(HELLOIMGUI_DOWNLOAD_FREETYPE_IF_NEEDED OFF CACHE BOOL "")
 set(HELLOIMGUI_USE_FREETYPE OFF CACHE BOOL "")
 set(HELLOIMGUI_USE_EXTERNAL_JSON ON CACHE BOOL "")
 set(HELLOIMGUI_BUILD_IMGUI OFF CACHE BOOL "" FORCE)
 set(HELLOIMGUI_IMGUI_SOURCE_DIR ${imgui_SOURCE_DIR} CACHE STRING "" FORCE)
+
+if (UNIX)
+    add_compile_options(-fPIC)
+endif()
+
 CPMAddPackage("gh:GhostofCookie/hello_imgui#bb61203")
 
 include(FetchContent)
@@ -59,6 +62,9 @@ include(${hello_imgui_SOURCE_DIR}/hello_imgui_cmake/msvc/msvc_target_group.cmake
 
 add_imgui(${imgui_SOURCE_DIR})
 add_simple_external_library_with_sources(imgui_node_editor ${imgui_node_editor_SOURCE_DIR})
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+CPMAddPackage("gh:gabime/spdlog@1.15.1")
 
 # -----------------------------------------------------------------------------
 # Library
