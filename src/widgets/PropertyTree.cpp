@@ -65,7 +65,8 @@ void PropertyTree::operator()() noexcept
                 continue;
             }
 
-            auto property_table = Table(category_name + "##table", _columns, ImGui::GetItemRectSize().x + 1.f);
+            auto property_table =
+                Table(category_name + "##table", _columns, static_cast<std::size_t>(ImGui::GetItemRectSize().x + 1.f));
             for (const auto& widget : widgets)
             {
                 property_table.AddEntry(widget);

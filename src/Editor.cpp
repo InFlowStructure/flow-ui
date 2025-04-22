@@ -10,6 +10,7 @@
 #include "utilities/Conversions.hpp"
 #include "windows/ModuleManagerWindow.hpp"
 #include "windows/NodeExplorerWindow.hpp"
+#include "windows/PropertyWindow.hpp"
 #include "windows/ShortcutsWindow.hpp"
 
 #include <flow/core/Node.hpp>
@@ -40,7 +41,7 @@ HelloImGui::RunnerParams _params;
 
 Editor::Editor(const std::string& initial_file)
 {
-    _params.appWindowParams.windowTitle             = "Flow Code";
+    _params.appWindowParams.windowTitle             = "Flow Editor";
     _params.appWindowParams.borderless              = false;
     _params.appWindowParams.restorePreviousGeometry = true;
     _params.iniFolderType                           = HelloImGui::IniFolderType::TempFolder;
@@ -123,7 +124,7 @@ void Editor::Init(const std::string& initial_file)
         }
     });
 
-    _env->GetFactory()->RegisterNodeClass<PreviewNode>("Editor", "Preview");
+    _factory->RegisterNodeClass<PreviewNode>("Editor", "Preview");
     _factory->RegisterNodeView<PreviewNodeView, PreviewNode>();
 
     _factory->RegisterInputType<bool>(false);
@@ -154,7 +155,13 @@ void Editor::Init(const std::string& initial_file)
 
     AddDockspace(PropertyDockspace, DefaultDockspace, 0.25f, DockspaceSplitDirection::Left);
     AddDockspace("PropertySubSpace", PropertyDockspace, 0.5f, DockspaceSplitDirection::Down);
+    AddDockspace("MiscSpace", DefaultDockspace, 0.25f, DockspaceSplitDirection::Down);
 
+    auto property_window = std::make_shared<PropertyWindow>(_env);
+    OnActiveGraphChanged.Bind(flow::IndexableName{property_window->GetName()},
+                              [=](const auto& g) { property_window->SetCurrentGraph(g); });
+
+    AddWindow(std::move(property_window), PropertyDockspace);
     AddWindow(std::move(node_explorer), "PropertySubSpace");
     AddWindow(std::make_shared<ModuleManagerWindow>(_env, default_modules_path), "PropertySubSpace", false);
     AddWindow(std::make_shared<ShortcutsWindow>(), PropertyDockspace, false);
@@ -289,6 +296,7 @@ void Editor::DrawMainMenuBar()
                 {
                     std::filesystem::create_directory(default_modules_path);
                     std::filesystem::copy_file(filename, new_module_file, std::filesystem::copy_options::skip_existing);
+                    _env->LoadModule(new_module_file);
                 }
                 catch (const std::exception& e)
                 {

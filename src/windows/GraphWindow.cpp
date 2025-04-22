@@ -237,10 +237,6 @@ GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph)
 
     _editor_ctx = std::unique_ptr<EditorContext>(std::bit_cast<EditorContext*>(ed::CreateEditor(&config)));
 
-    auto& canvas_view    = const_cast<ImGuiEx::CanvasView&>(GetEditorDetailContext(_editor_ctx)->GetView());
-    canvas_view.Origin   = {0, 0};
-    canvas_view.InvScale = 75;
-
     auto& ed_style           = GetEditorDetailContext(GetEditorContext())->GetStyle();
     ed_style.NodeBorderWidth = 0.5f;
     ed_style.FlowDuration    = 1.f;
@@ -371,6 +367,7 @@ try
     }
 
     ImGui::SetCursorScreenPos(cursorTopLeft);
+
     ed::Suspend();
 
     static ed::NodeId context_node_id = 0;
@@ -390,6 +387,7 @@ try
         _get_popup_location = true;
         _new_node_link_pin  = nullptr;
     }
+
     ed::Resume();
 
     if (_get_popup_location)
@@ -778,9 +776,9 @@ void GraphWindow::OnLoadNode(const flow::SharedNode& node, const json& position_
     {
         auto view_factory = std::dynamic_pointer_cast<ViewFactory>(GetEnv()->GetFactory());
         node_view         = view_factory->CreateNodeView(node);
-        node_view->Node->OnSetOutput.Bind("ShowLinkFlowing", [=, this, node_id = node->ID()](const IndexableName& key) {
-            ShowLinkFlowing(node_id, key);
-        });
+        node_view->Node->OnSetOutput.Bind(
+            "ShowLinkFlowing",
+            [=, this, node_id = node->ID()](const IndexableName& key, auto) { ShowLinkFlowing(node_id, key); });
 
         _item_views.emplace(node_view->ID(), node_view);
     }
@@ -814,7 +812,7 @@ flow::SharedNode GraphWindow::CreateNode(const std::string& class_name, const st
         throw std::runtime_error("Failed to create node: " + display_name);
     }
 
-    new_node->OnSetOutput.Bind("ShowLinkFlowing", [=, this, node_id = new_node->ID()](const IndexableName& key) {
+    new_node->OnSetOutput.Bind("ShowLinkFlowing", [=, this, node_id = new_node->ID()](const IndexableName& key, auto) {
         ShowLinkFlowing(node_id, key);
     });
 
@@ -975,7 +973,7 @@ void GraphWindow::CreateNodesAction(const json& SPDLOG_json)
         auto node_view     = factory->CreateNodeView(node);
 
         node->OnSetOutput.Bind("ShowLinkFlowing",
-                                 [=, this, id = node->ID()](const auto& key) { ShowLinkFlowing(id, key); });
+                                 [=, this, id = node->ID()](const auto& key, auto) { ShowLinkFlowing(id, key); });
 
         const ImVec2 pos     = position_json;
         const ImVec2 new_pos = ImGui::GetMousePos() + (pos - first_pos);
