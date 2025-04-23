@@ -196,3 +196,12 @@ if(flow-ui_INSTALL)
 
   write_basic_package_version_file(${PROJECT_NAME}ConfigVersion.cmake COMPATIBILITY SameMajorVersion)
 endif()
+
+# -----------------------------------------------------------------------------
+# Examples
+# -----------------------------------------------------------------------------
+
+option(BUILD_EXAMPLES OFF)
+if (BUILD_EXAMPLES)
+  add_subdirectory(examples)
+endif()
