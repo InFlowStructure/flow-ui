@@ -54,7 +54,7 @@ if (UNIX)
     add_compile_options(-fPIC)
 endif()
 
-CPMAddPackage("gh:GhostofCookie/hello_imgui#0e0adb7")
+CPMAddPackage("gh:pthom/hello_imgui#c985031")
 
 include(FetchContent)
 include(cmake/add_libs.cmake)
