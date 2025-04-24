@@ -1,14 +1,16 @@
 #include "NewModuleWindow.hpp"
 
 #include "FileExplorer.hpp"
-#include "widgets/InputField.hpp"
-#include "widgets/Table.hpp"
+#include "ModuleInfo.hpp"
 #include "widgets/Text.hpp"
 
 #include <imgui.h>
 
 #include <filesystem>
 #include <fstream>
+#include <string>
+
+using namespace std::string_literals;
 
 FLOW_UI_NAMESPACE_START
 
@@ -24,7 +26,7 @@ std::string replace_all(std::string str, const std::string& from, const std::str
     return str;
 }
 
-void GenerateProjectFiles(std::filesystem::path project_dir, const std::string& name, const std::string version,
+void GenerateProjectFiles(std::filesystem::path project_dir, const ModuleInfo& info,
                           const std::vector<std::string>& dependencies)
 {
     if (std::filesystem::exists(project_dir))
@@ -36,7 +38,7 @@ void GenerateProjectFiles(std::filesystem::path project_dir, const std::string& 
     std::filesystem::create_directories(project_dir / "src");
     std::filesystem::create_directories(project_dir / "include");
 
-    std::string namespace_str = name;
+    std::string namespace_str = info.Name;
     namespace_str             = replace_all(namespace_str, "-", "_");
     namespace_str             = replace_all(namespace_str, " ", "_");
 
@@ -55,7 +57,12 @@ void GenerateProjectFiles(std::filesystem::path project_dir, const std::string& 
                 return a.empty() ? "${" + b + "}" : a + " " + "${" + b + "}";
             });
 
-        const std::string find_lib_str  = "find_library({{lib}} NAMES {{lib}} REQUIRED)";
+        const std::string find_lib_str = "find_library({{lib}} NAMES {{lib}} PATH_SUFFIXES lib REQUIRED)\n"s +
+                                         "get_filename_component({{lib}}_PATH ${{{lib}}} DIRECTORY)\n"s +
+                                         "get_filename_component({{lib}}_PATH ${{{lib}}_PATH} DIRECTORY)\n"s +
+                                         "set({{lib}}_INCLUDE_DIR \"${{{lib}}_PATH}/include\")\n"s +
+                                         "list(APPEND FLOW_INCLUDE_DIR ${{{lib}}_INCLUDE_DIR})"s;
+
         const std::string find_libs_str = std::accumulate(dependencies.begin(), dependencies.end(), std::string(""),
                                                           [&](const std::string& a, const std::string& b) {
                                                               return a + replace_all(find_lib_str, "{{lib}}", b) + "\n";
@@ -67,13 +74,12 @@ void GenerateProjectFiles(std::filesystem::path project_dir, const std::string& 
         buffer << cmake_lists_template_fs.rdbuf();
 
         std::string cmake_lists_template = buffer.str();
-        cmake_lists_template             = replace_all(cmake_lists_template, "{{name}}", name);
-        cmake_lists_template             = replace_all(cmake_lists_template, "{{version}}", version);
-        cmake_lists_template             = replace_all(cmake_lists_template, "{{find_libs}}", find_libs_str);
-        cmake_lists_template             = replace_all(cmake_lists_template, "{{dependencies}}", dependencies_str);
-        cmake_lists_template             = replace_all(cmake_lists_template, "{{export}}", export_str);
-        cmake_lists_template             = replace_all(cmake_lists_template, "{{flow_dir}}",
-                                                       replace_all(FileExplorer::GetExecutablePath().string(), "\\", "/"));
+
+        cmake_lists_template = replace_all(cmake_lists_template, "{{name}}", info.Name);
+        cmake_lists_template = replace_all(cmake_lists_template, "{{version}}", info.Version);
+        cmake_lists_template = replace_all(cmake_lists_template, "{{find_libs}}", find_libs_str);
+        cmake_lists_template = replace_all(cmake_lists_template, "{{dependencies}}", dependencies_str);
+        cmake_lists_template = replace_all(cmake_lists_template, "{{export}}", export_str);
 
         std::ofstream cmake_lists_fs(project_dir / "CMakeLists.txt");
         cmake_lists_fs << cmake_lists_template;
@@ -93,9 +99,15 @@ void GenerateProjectFiles(std::filesystem::path project_dir, const std::string& 
         std::ofstream register_source_fs(project_dir / "src" / "register.cpp");
         register_source_fs << register_source_template;
     }
+
+    // module.flowmod
+    {
+        std::ofstream module_file_fs(project_dir / (info.Name + ".flowmod"));
+        module_file_fs << json(info).dump(4);
+    }
 }
 
-void BuildProject(std::filesystem::path project_dir)
+bool BuildProject(std::filesystem::path project_dir)
 {
     const std::filesystem::path build_dir = project_dir / "build";
 
@@ -106,35 +118,56 @@ void BuildProject(std::filesystem::path project_dir)
     std::string build_cmd = "cmake --build {{build_dir}} -j";
     build_cmd             = replace_all(build_cmd, "{{build_dir}}", build_dir.string());
 
-    std::system(configure_cmd.c_str());
-    std::system(build_cmd.c_str());
+    if (std::system(configure_cmd.c_str()))
+    {
+        return false;
+    }
+
+    if (std::system(build_cmd.c_str()))
+    {
+        return false;
+    }
+
+    return true;
 }
 
-NewModuleWindow::NewModuleWindow() : Window(Name) {}
+NewModuleWindow::NewModuleWindow() : Window(Name)
+{
+    name_input        = std::make_shared<widgets::Input<std::string>>("name", "");
+    version_input     = std::make_shared<widgets::Input<std::string>>("version", "");
+    author_input      = std::make_shared<widgets::Input<std::string>>("author", "");
+    description_input = std::make_shared<widgets::Input<std::string>>("description", "");
+    dependencies      = std::make_shared<widgets::Table>("dependencies", 2);
 
-void NewModuleWindow::Draw()
+    auto flow_core_dep = std::make_shared<widgets::Input<bool>>("flow-core", true);
+    dependencies->AddEntry(flow_core_dep);
+    dependencies->AddEntry(std::make_shared<widgets::Text>("flow-core"));
+
+    auto flow_ui_dep = std::make_shared<widgets::Input<bool>>("flow-ui", false);
+    dependencies->AddEntry(flow_ui_dep);
+    dependencies->AddEntry(std::make_shared<widgets::Text>("flow-ui"));
+}
+
+void NewModuleWindow::Clear()
+{
+    name_input.reset(new widgets::Input<std::string>("name", ""));
+    version_input.reset(new widgets::Input<std::string>("version", ""));
+    author_input.reset(new widgets::Input<std::string>("author", ""));
+    description_input.reset(new widgets::Input<std::string>("description", ""));
+    dependencies.reset(new widgets::Table("dependencies", 2));
+
+    auto flow_core_dep = std::make_shared<widgets::Input<bool>>("flow-core", true);
+    dependencies->AddEntry(flow_core_dep);
+    dependencies->AddEntry(std::make_shared<widgets::Text>("flow-core"));
+
+    auto flow_ui_dep = std::make_shared<widgets::Input<bool>>("flow-ui", false);
+    dependencies->AddEntry(flow_ui_dep);
+    dependencies->AddEntry(std::make_shared<widgets::Text>("flow-ui"));
+}
+
+bool NewModuleWindow::DrawAndCreate()
 try
 {
-    static auto name_input        = std::make_shared<widgets::Input<std::string>>("name", _name);
-    static auto version_input     = std::make_shared<widgets::Input<std::string>>("version", _version);
-    static auto author_input      = std::make_shared<widgets::Input<std::string>>("author", _author);
-    static auto description_input = std::make_shared<widgets::Input<std::string>>("description", _description);
-    static auto dependencies      = std::make_shared<widgets::Table>("dependencies", 2);
-
-    static auto flow_core_dep = std::make_shared<widgets::Input<bool>>("flow-core", true);
-    if (flow_core_dep.use_count() == 1)
-    {
-        dependencies->AddEntry(flow_core_dep);
-        dependencies->AddEntry(std::make_shared<widgets::Text>("flow-core"));
-    }
-
-    static auto flow_ui_dep = std::make_shared<widgets::Input<bool>>("flow-ui", false);
-    if (flow_ui_dep.use_count() == 1)
-    {
-        dependencies->AddEntry(flow_ui_dep);
-        dependencies->AddEntry(std::make_shared<widgets::Text>("flow-ui"));
-    }
-
     widgets::Table new_module_form("new_module_form", 2);
     new_module_form.AddEntry(std::make_shared<widgets::Text>("Name"));
     new_module_form.AddEntry(name_input);
@@ -149,30 +182,40 @@ try
 
     new_module_form();
 
-    if (auto _ = name_input->GetData())
-    {
-        _name = name_input->GetValue();
-    }
-
+    bool created = false;
     ImGui::BeginHorizontal("buttons");
     ImGui::Spring();
     if (ImGui::Button("Create"))
     {
-        const auto& project_dir = FileExplorer::GetDocumentsPath() / _name;
-
-        GenerateProjectFiles(project_dir, _name, _version, {"flow-core", "flow-ui"});
-        BuildProject(project_dir);
-
-        try
-        {
-            // std::filesystem::copy_file(project_dir / "build" / "Debug" / "cmath.dll", _modules_path / "cmath.dll",
-            //                            std::filesystem::copy_options::overwrite_existing);
-        }
-        catch (...)
-        {
-        }
-
         ImGui::CloseCurrentPopup();
+
+        const auto& name        = name_input->GetValue();
+        const auto& project_dir = FileExplorer::GetDocumentsPath() / name;
+
+        const auto& flow_core_dep = std::static_pointer_cast<widgets::Input<bool>>(dependencies->GetEntry(0));
+        const auto& flow_ui_dep   = std::static_pointer_cast<widgets::Input<bool>>(dependencies->GetEntry(2));
+        std::vector<std::string> chosen_deps;
+
+        if (flow_core_dep->GetValue())
+        {
+            chosen_deps.push_back("flow-core");
+        }
+
+        if (flow_ui_dep->GetValue())
+        {
+            chosen_deps.push_back("flow-ui");
+        }
+
+        GenerateProjectFiles(project_dir,
+                             ModuleInfo{
+                                 .Name        = name,
+                                 .Version     = version_input->GetValue(),
+                                 .Author      = author_input->GetValue(),
+                                 .Description = description_input->GetValue(),
+                             },
+                             chosen_deps);
+
+        created = BuildProject(project_dir);
     }
 
     ImGui::SetItemDefaultFocus();
@@ -181,10 +224,13 @@ try
         ImGui::CloseCurrentPopup();
     }
     ImGui::EndHorizontal();
+
+    return created;
 }
 catch (...)
 {
     Window::Draw();
+    return false;
 }
 
 FLOW_UI_NAMESPACE_END
