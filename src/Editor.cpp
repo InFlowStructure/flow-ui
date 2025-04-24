@@ -155,6 +155,7 @@ void Editor::Init(const std::string& initial_file)
 
     AddDockspace(PropertyDockspace, DefaultDockspace, 0.25f, DockspaceSplitDirection::Left);
     AddDockspace("PropertySubSpace", PropertyDockspace, 0.5f, DockspaceSplitDirection::Down);
+    AddDockspace("ToolbarSpace", DefaultDockspace, 0.1f, DockspaceSplitDirection::Up);
     AddDockspace("MiscSpace", DefaultDockspace, 0.25f, DockspaceSplitDirection::Down);
 
     auto property_window = std::make_shared<PropertyWindow>(_env);

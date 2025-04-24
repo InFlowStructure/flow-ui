@@ -36,6 +36,8 @@ class Table : public Widget
      */
     void AddEntry(std::shared_ptr<Widget> widget);
 
+    const std::shared_ptr<Widget>& GetEntry(std::size_t i) const { return _widgets.at(i); }
+
   private:
     std::string _name;
     std::size_t _columns      = 0;
