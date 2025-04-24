@@ -18,7 +18,7 @@ FLOW_UI_NAMESPACE_START
 const std::string module_file_extension = "flowmod";
 #ifdef FLOW_WINDOWS
 const std::string module_binary_extension = ".dll";
-#elif FLOW_APPLE
+#elif defined(FLOW_APPLE)
 const std::string module_binary_extension = ".dylib";
 #else
 const std::string module_binary_extension = ".so";
