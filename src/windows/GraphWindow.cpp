@@ -254,7 +254,22 @@ GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph)
     node_creation_context_menu.OnSelection =
         [this, factory = std::dynamic_pointer_cast<ViewFactory>(GetEnv()->GetFactory())](const auto& class_name,
                                                                                          const auto& display_name) {
+            // Log zoom/scale state before context menu node creation
+            float zoom_before = ed::GetCurrentZoom();
+            ImVec2 screen_size = ed::GetScreenSize();
+            ImVec2 canvas_pos = ed::ScreenToCanvas({_open_popup_position.x, _open_popup_position.y});
+            
+            SPDLOG_DEBUG("CONTEXT-MENU START: Zoom={}, ScreenSize=({},{}), PopupPos=({},{}), CanvasPos=({},{})",
+                        zoom_before, screen_size.x, screen_size.y, 
+                        _open_popup_position.x, _open_popup_position.y, canvas_pos.x, canvas_pos.y);
+            
             CreateNode(class_name, display_name);
+            
+            // Log zoom/scale state after context menu node creation
+            float zoom_after = ed::GetCurrentZoom();
+            
+            SPDLOG_DEBUG("CONTEXT-MENU END: Zoom={}", zoom_after);
+            
             ImGui::CloseCurrentPopup();
         };
 
@@ -262,7 +277,14 @@ GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph)
         const auto factory = std::dynamic_pointer_cast<ViewFactory>(GetEnv()->GetFactory());
         auto node_view     = factory->CreateNodeView(n);
         _item_views.emplace(node_view->ID(), node_view);
-        ed::SetNodePosition(node_view->ID(), {_open_popup_position.x, _open_popup_position.y});
+        
+        // Set position based on creation method
+        if (_is_drag_drop) {
+            SPDLOG_DEBUG("Setting drag-drop node position to canvas coordinates: ({},{})", _drag_drop_position.x, _drag_drop_position.y);
+            ed::SetNodePosition(node_view->ID(), _drag_drop_position);
+        } else {
+            ed::SetNodePosition(node_view->ID(), {_open_popup_position.x, _open_popup_position.y});
+        }
 
         if (auto start_pin = _new_node_link_pin)
         {
@@ -341,13 +363,36 @@ try
     {
         if (auto payload = ImGui::AcceptDragDropPayload("NewNode"))
         {
+            // Log zoom/scale state before drop
+            float zoom_before = ed::GetCurrentZoom();
+            ImVec2 screen_size = ed::GetScreenSize();
+            ImVec2 mouse_pos = ImGui::GetMousePos();
+            ImVec2 canvas_pos = ed::ScreenToCanvas(mouse_pos);
+
+            std::cerr << "DRAG-DROP PAYLOAD: " << payload->DataSize << " bytes, "
+                      << "Zoom=" << zoom_before << ", "
+                      << "ScreenSize=(" << screen_size.x << "," << screen_size.y << "), "
+                      << "MousePos=(" << mouse_pos.x << "," << mouse_pos.y << "), "
+                      << "CanvasPos=(" << canvas_pos.x << "," << canvas_pos.y << ")" << std::endl;
+            
+            SPDLOG_DEBUG("DRAG-DROP START: Zoom={}, ScreenSize=({},{}), MousePos=({},{}), CanvasPos=({},{})",
+                        zoom_before, screen_size.x, screen_size.y, mouse_pos.x, mouse_pos.y, canvas_pos.x, canvas_pos.y);
+
             std::string class_name   = reinterpret_cast<const char*>(payload->Data);
             std::string display_name = GetEnv()->GetFactory()->GetFriendlyName(class_name);
 
-            _graph->OnNodeAdded.Bind(
-                "SetPos", [](auto&& n) { ed::SetNodePosition(std::hash<UUID>{}(n->ID()), ImGui::GetMousePos()); });
+            // Store the drop position for the CreateNodeView callback
+            _drag_drop_position = canvas_pos;
+            _is_drag_drop = true;
+            
             CreateNode(class_name, display_name);
-            _graph->OnNodeAdded.Unbind("SetPos");
+            
+            _is_drag_drop = false;
+            
+            // Log zoom/scale state after drop
+            float zoom_after = ed::GetCurrentZoom();
+            
+            SPDLOG_DEBUG("DRAG-DROP END: Zoom={}", zoom_after);
         }
 
         ImGui::EndDragDropTarget();
@@ -946,6 +991,15 @@ json GraphWindow::CopySelection()
 
 void GraphWindow::CreateNodesAction(const json& SPDLOG_json)
 {
+    // Log zoom/scale state before paste/duplicate operation
+    float zoom_before = ed::GetCurrentZoom();
+    ImVec2 screen_size = ed::GetScreenSize();
+    ImVec2 mouse_pos = ImGui::GetMousePos();
+    ImVec2 canvas_pos = ed::ScreenToCanvas(mouse_pos);
+    
+    SPDLOG_DEBUG("PASTE/DUPLICATE START: Zoom={}, ScreenSize=({},{}), MousePos=({},{}), CanvasPos=({},{})",
+                zoom_before, screen_size.x, screen_size.y, mouse_pos.x, mouse_pos.y, canvas_pos.x, canvas_pos.y);
+
     json new_diff = SPDLOG_json;
     if (!new_diff.contains("nodes")) return;
 
@@ -976,7 +1030,9 @@ void GraphWindow::CreateNodesAction(const json& SPDLOG_json)
                                  [=, this, id = node->ID()](const auto& key, auto) { ShowLinkFlowing(id, key); });
 
         const ImVec2 pos     = position_json;
-        const ImVec2 new_pos = ImGui::GetMousePos() + (pos - first_pos);
+        const ImVec2 new_pos = canvas_pos + (pos - first_pos);
+        SPDLOG_DEBUG("Setting pasted node position: Original=({},{}), FirstPos=({},{}), CanvasPos=({},{}), NewPos=({},{})",
+                    pos.x, pos.y, first_pos.x, first_pos.y, canvas_pos.x, canvas_pos.y, new_pos.x, new_pos.y);
         ed::SetNodePosition(node_view->ID(), new_pos);
 
         _item_views.emplace(std::hash<flow::UUID>{}(node->ID()), std::move(node_view));
@@ -1011,6 +1067,11 @@ void GraphWindow::CreateNodesAction(const json& SPDLOG_json)
     {
         OnLoadConnection(conn);
     }
+    
+    // Log zoom/scale state after paste/duplicate operation
+    float zoom_after = ed::GetCurrentZoom();
+    
+    SPDLOG_DEBUG("PASTE/DUPLICATE END: Zoom={}", zoom_after);
 
     _undo_history.push(Action{ActionType::Create, new_diff});
 }

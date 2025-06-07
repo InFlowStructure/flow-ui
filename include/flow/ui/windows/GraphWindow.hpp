@@ -11,6 +11,8 @@
 #include <flow/core/Graph.hpp>
 #include <flow/core/NodeFactory.hpp>
 
+#include <imgui.h>
+
 #include <algorithm>
 #include <memory>
 #include <stack>
@@ -230,6 +232,10 @@ class GraphWindow : public Window
         float x = 0.f;
         float y = 0.f;
     } _open_popup_position;
+
+    // Drag-drop positioning
+    ImVec2 _drag_drop_position{0.f, 0.f};
+    bool _is_drag_drop = false;
 
     bool _active             = true;
     bool _open               = true;

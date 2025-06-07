@@ -101,18 +101,19 @@ catch (const std::exception& e)
 void NodeView::Draw()
 try
 {
-    const auto& name = Node->GetName().c_str();
-
     if (_received_error)
     {
-        ed::PushStyleColor(ed::StyleColor_NodeBorder, ImColor(227, 36, 27));
+        ed::PushStyleColor(ed::StyleColor_NodeBorder, ImColor(227, 36, 27));  // Red border for error state
     }
 
     _builder->Begin(_id);
 
-    _builder->Header(utility::to_ImColor(HeaderColour));
+    _builder->Header(utility::to_ImColor(HeaderColour));  // Default header color is (40, 75, 99)
     ImGui::Spring(0);
+    const auto& name = Node->GetName().c_str();
 
+
+    // Custom font for node headers
     if (GetConfig().NodeHeaderFont)
     {
         ImGui::PushFont(std::bit_cast<ImFont*>(GetConfig().NodeHeaderFont.get()));
@@ -250,13 +251,13 @@ CommentView::CommentView(CommentSize size, std::string_view name)
 
 void CommentView::Draw()
 {
-    const float commentAlpha = 0.75f;
+    const float commentAlpha = 0.75f;  // Semi-transparent
 
     ImGui::PushStyleVar(ImGuiStyleVar_Alpha, commentAlpha);
-    ed::PushStyleColor(ed::StyleColor_NodeBg, ImColor(0, 0, 0, 64));
-    ed::PushStyleColor(ed::StyleColor_NodeBorder, ImColor(0, 0, 0, 64));
-    ed::PushStyleVar(ed::StyleVar_NodeRounding, 0.f);
-    ed::PushStyleVar(ed::StyleVar_NodeBorderWidth, 0.f);
+    ed::PushStyleColor(ed::StyleColor_NodeBg, ImColor(0, 0, 0, 64));      // Dark semi-transparent background
+    ed::PushStyleColor(ed::StyleColor_NodeBorder, ImColor(0, 0, 0, 64));  // Dark semi-transparent border
+    ed::PushStyleVar(ed::StyleVar_NodeRounding, 0.f);                     // No rounding
+    ed::PushStyleVar(ed::StyleVar_NodeBorderWidth, 0.f);                 // No border
     ed::PushStyleVar(ed::StyleVar_NodePadding, ImVec4(0, 5, 0, 0));
     ed::PushStyleVar(ed::StyleVar_GroupRounding, 0.f);
 
