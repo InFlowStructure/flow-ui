@@ -74,9 +74,29 @@ void PropertyWindow::Draw()
 
     for (auto& node : nodes)
     {
-
         std::string c_name = node->GetName() + "##" + std::to_string(std::hash<flow::UUID>{}(node->ID()));
         widgets::PropertyTree properties(c_name, 2);
+
+        // Get and display node position and size
+        ed::NodeId node_id = std::hash<flow::UUID>{}(node->ID());
+        ImVec2 node_pos = ed::GetNodePosition(node_id);
+        ImVec2 node_size = ed::GetNodeSize(node_id);
+        
+        // Add position property
+        properties.AddProperty("Position", {
+            std::make_shared<widgets::Text>("X"),
+            std::make_shared<widgets::Text>(std::to_string(static_cast<int>(node_pos.x))),
+            std::make_shared<widgets::Text>("Y"),
+            std::make_shared<widgets::Text>(std::to_string(static_cast<int>(node_pos.y)))
+        }, "Node Info");
+        
+        // Add size property
+        properties.AddProperty("Size", {
+            std::make_shared<widgets::Text>("Width"),
+            std::make_shared<widgets::Text>(std::to_string(static_cast<int>(node_size.x))),
+            std::make_shared<widgets::Text>("Height"),
+            std::make_shared<widgets::Text>(std::to_string(static_cast<int>(node_size.y)))
+        }, "Node Info");
 
         const auto make_port_data_property = [&](const auto& port) -> std::vector<std::shared_ptr<flow::ui::Widget>> {
             return {

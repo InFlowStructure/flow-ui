@@ -277,13 +277,30 @@ GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph)
         const auto factory = std::dynamic_pointer_cast<ViewFactory>(GetEnv()->GetFactory());
         auto node_view     = factory->CreateNodeView(n);
         _item_views.emplace(node_view->ID(), node_view);
+                // Get node size to center it at the drop position
+            ImVec2 node_size = ed::GetNodeSize(node_view->ID());
+            
+            // If node size is not available yet, use a default estimate
+            if (node_size.x == 0 || node_size.y == 0) {
+                node_size = ImVec2(150, 100); // Default estimate
+            }
+            
+            // Center the node at the drop position
+            ImVec2 centered_pos = ImVec2(
+                _drag_drop_position.x - node_size.x * 0.5f,
+                _drag_drop_position.y - node_size.y * 0.5f
+            );
         
         // Set position based on creation method
         if (_is_drag_drop) {
-            SPDLOG_DEBUG("Setting drag-drop node position to canvas coordinates: ({},{})", _drag_drop_position.x, _drag_drop_position.y);
-            ed::SetNodePosition(node_view->ID(), _drag_drop_position);
+            SPDLOG_DEBUG("Setting drag-drop node position: drop=({},{}), size=({},{}), centered=({},{})", 
+                        _drag_drop_position.x, _drag_drop_position.y,
+                        node_size.x, node_size.y,
+                        centered_pos.x, centered_pos.y);
+            
+            ed::SetNodePosition(node_view->ID(), centered_pos);
         } else {
-            ed::SetNodePosition(node_view->ID(), {_open_popup_position.x, _open_popup_position.y});
+            ed::SetNodePosition(node_view->ID(), centered_pos);
         }
 
         if (auto start_pin = _new_node_link_pin)
@@ -363,6 +380,9 @@ try
     {
         if (auto payload = ImGui::AcceptDragDropPayload("NewNode"))
         {
+            // Make sure we're in the correct editor context
+            ed::SetCurrentEditor(std::bit_cast<ed::EditorContext*>(_editor_ctx.get()));
+            
             // Log zoom/scale state before drop
             float zoom_before = ed::GetCurrentZoom();
             ImVec2 screen_size = ed::GetScreenSize();
@@ -774,7 +794,15 @@ void GraphWindow::CreateItems()
         _new_link_pin = FindPort(pinId);
         if (_new_link_pin)
         {
-            DrawLabel("+ Create Node", ImColor(32, 45, 32, 180));
+            // Show current canvas position while dragging
+            ImVec2 mouse_pos = ImGui::GetMousePos();
+            ImVec2 canvas_pos = ed::ScreenToCanvas(mouse_pos);
+            
+            std::string label = "+ Create Node at (" + 
+                              std::to_string(static_cast<int>(canvas_pos.x)) + ", " + 
+                              std::to_string(static_cast<int>(canvas_pos.y)) + ")";
+            
+            DrawLabel(label.c_str(), ImColor(32, 45, 32, 180));
         }
 
         if (ed::AcceptNewItem())

@@ -99,6 +99,7 @@ void NodeExplorerWindow::DrawPopupCategory(const std::string& category, const fl
         if (ImGui::BeginDragDropSource())
         {
             const auto class_name = it->second;
+            
             ImGui::Text("+ Create Node");
             ImGui::SetDragDropPayload("NewNode", class_name.c_str(), class_name.size() + 1, ImGuiCond_Once);
             ImGui::EndDragDropSource();
