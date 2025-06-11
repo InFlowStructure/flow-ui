@@ -212,6 +212,7 @@ GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph)
     config.UserPointer      = this;
     config.EnableSmoothZoom = true;
     config.SettingsFile     = "";
+    config.CanvasSizeMode   = ed::CanvasSizeMode::CenterOnly;
 
     config.SaveNodeSettings = []([[maybe_unused]] ed::NodeId nodeId, [[maybe_unused]] const char* data,
                                  [[maybe_unused]] std::size_t size, ed::SaveReasonFlags reason,
@@ -237,6 +238,10 @@ GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph)
     };
 
     _editor_ctx = std::unique_ptr<EditorContext>(std::bit_cast<EditorContext*>(ed::CreateEditor(&config)));
+
+    // Set initial view state
+    ed::SetCurrentEditor(std::bit_cast<ed::EditorContext*>(_editor_ctx.get()));
+    ed::NavigateToContent(0.0f); // Navigate without animation
 
     auto& ed_style           = GetEditorDetailContext(GetEditorContext())->GetStyle();
     ed_style.NodeBorderWidth = 0.5f;
