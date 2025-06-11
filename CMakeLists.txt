@@ -4,10 +4,20 @@ if(NOT PROJECT_NAME)
   add_compile_definitions(FLOW_UI_EXPORT)
 endif()
 
-project(flow-ui VERSION 1.0.1 LANGUAGES CXX)
+project(Flow VERSION 1.0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
+  string(TOUPPER ${CONFIG} CONFIG)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${CONFIG} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${CONFIG} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${CONFIG} ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
+endforeach(CONFIG CMAKE_CONFIGURATION_TYPES)
 
 if(APPLE)
   enable_language(OBJC)
@@ -29,8 +39,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(cmake/CPM.cmake)
 
-CPMAddPackage("gh:InFlowStructure/flow-core@1.2.0")
-CPMAddPackage("gh:btzy/nativefiledialog-extended@1.2.1")
+CPMAddPackage("gh:InFlowStructure/flow-core#7253c7d")
+CPMAddPackage("gh:btzy/nativefiledialog-extended#29e3bcb")
 
 FetchContent_Declare(
   imgui
@@ -88,7 +98,7 @@ list(APPEND flow-ui_HEADERS
   ${flow-ui_WINDOW_HEADERS}
 )
 
-add_library(${PROJECT_NAME} SHARED
+add_library(flow-ui SHARED
   # Main source files
   src/Config.cpp
   src/Core.cpp
@@ -107,6 +117,7 @@ add_library(${PROJECT_NAME} SHARED
   # Window source files
   src/windows/GraphWindow.cpp
   src/windows/ModuleManagerWindow.cpp
+  src/windows/NewModuleWindow.cpp
   src/windows/NodeExplorerWindow.cpp
   src/windows/PropertyWindow.cpp
   src/windows/ShortcutsWindow.cpp
@@ -124,14 +135,14 @@ add_library(${PROJECT_NAME} SHARED
   ${flow-ui_HEADERS}
 )
 
-add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
+add_library(flow-ui::flow-ui ALIAS flow-ui)
 
 if(MSVC)
   add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
-  target_compile_options(${PROJECT_NAME} PRIVATE /W4)
+  target_compile_options(flow-ui PRIVATE /W4 /MP)
 endif()
 
-target_include_directories(${PROJECT_NAME}
+target_include_directories(flow-ui
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
@@ -145,57 +156,33 @@ target_include_directories(${PROJECT_NAME}
     ${PROJECT_SOURCE_DIR}/include/flow/ui/widgets
 )
 
-target_link_libraries(${PROJECT_NAME} PUBLIC
+target_link_libraries(flow-ui PUBLIC
   flow-core::flow-core
   nlohmann_json::nlohmann_json
   spdlog::spdlog
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
+target_link_libraries(flow-ui PRIVATE
   imgui
   imgui_node_editor
   hello_imgui
   nfd
 )
-target_compile_definitions(${PROJECT_NAME} PUBLIC IMGUI_DEFINE_MATH_OPERATORS)
+target_compile_definitions(flow-ui PUBLIC IMGUI_DEFINE_MATH_OPERATORS)
 
 add_subdirectory(programs/editor)
 
-# -----------------------------------------------------------------------------
-# Install
-# -----------------------------------------------------------------------------
+install(TARGETS flow-ui flow-core
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
 
-if(flow-ui_INSTALL)
-  set(export_destination "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(DIRECTORY ${flow-core_SOURCE_DIR}/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(DIRECTORY ${CPM_PACKAGE_json_SOURCE_DIR}/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(DIRECTORY ${CPM_PACKAGE_thread-pool_SOURCE_DIR}/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-  install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-  install(TARGETS ${PROJECT_NAME} imgui hello_imgui imgui_node_editor
-    EXPORT ${PROJECT_NAME}Targets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-  )
-
-  install(EXPORT ${PROJECT_NAME}Targets
-    DESTINATION ${export_destination}
-    NAMESPACE ${PROJECT_NAME}::
-    FILE "${PROJECT_NAME}Targets.cmake")
-
-  include(CMakePackageConfigHelpers)
-  configure_package_config_file(
-    "${CMAKE_CURRENT_LIST_DIR}/cmake/${PROJECT_NAME}Config.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
-    INSTALL_DESTINATION ${export_destination}
-  )
-
-  install(
-    FILES "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
-    DESTINATION ${export_destination}
-  )
-
-  write_basic_package_version_file(${PROJECT_NAME}ConfigVersion.cmake COMPATIBILITY SameMajorVersion)
-endif()
 
 # -----------------------------------------------------------------------------
 # Examples

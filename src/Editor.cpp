@@ -13,6 +13,7 @@
 #include "windows/PropertyWindow.hpp"
 #include "windows/ShortcutsWindow.hpp"
 
+#include <flow/core/FunctionNode.hpp>
 #include <flow/core/Node.hpp>
 #include <flow/core/NodeFactory.hpp>
 #include <flow/core/Port.hpp>
@@ -22,6 +23,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <imgui_node_editor.h>
+#include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
@@ -155,6 +157,7 @@ void Editor::Init(const std::string& initial_file)
 
     AddDockspace(PropertyDockspace, DefaultDockspace, 0.25f, DockspaceSplitDirection::Left);
     AddDockspace("PropertySubSpace", PropertyDockspace, 0.5f, DockspaceSplitDirection::Down);
+    AddDockspace("ToolbarSpace", DefaultDockspace, 0.1f, DockspaceSplitDirection::Up);
     AddDockspace("MiscSpace", DefaultDockspace, 0.25f, DockspaceSplitDirection::Down);
 
     auto property_window = std::make_shared<PropertyWindow>(_env);
@@ -278,31 +281,6 @@ void Editor::DrawMainMenuBar()
         if (ImGui::MenuItem("Save"))
         {
             SaveFlow();
-        }
-
-        if (ImGui::MenuItem("Save As"))
-        {
-            SaveFlow();
-        }
-
-        if (ImGui::MenuItem("Import Module"))
-        {
-            const auto filename        = FileExplorer::Load(default_modules_path, "Flow Modules", "so,dll,dylib");
-            const auto new_module_file = default_modules_path / filename.filename();
-
-            if (new_module_file != filename)
-            {
-                try
-                {
-                    std::filesystem::create_directory(default_modules_path);
-                    std::filesystem::copy_file(filename, new_module_file, std::filesystem::copy_options::skip_existing);
-                    _env->LoadModule(new_module_file);
-                }
-                catch (const std::exception& e)
-                {
-                    SPDLOG_ERROR("Caught exception while loading module {}: {}", filename.string(), e.what());
-                }
-            }
         }
 
         ImGui::EndMenu();

@@ -5,6 +5,7 @@
 
 #include <flow/core/Node.hpp>
 #include <flow/core/NodeData.hpp>
+#include <nlohmann/json.hpp>
 
 #include <string>
 

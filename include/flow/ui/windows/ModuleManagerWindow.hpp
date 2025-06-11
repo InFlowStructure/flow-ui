@@ -3,6 +3,7 @@
 #include "flow/ui/Core.hpp"
 #include "flow/ui/Widget.hpp"
 #include "flow/ui/Window.hpp"
+#include "flow/ui/windows/NewModuleWindow.hpp"
 
 #include <flow/core/Env.hpp>
 
@@ -36,6 +37,7 @@ class ModuleManagerWindow : public Window
     std::shared_ptr<Env> _env;
     std::filesystem::path _modules_path;
     std::map<std::string, std::shared_ptr<Widget>> _widgets;
+    std::unique_ptr<NewModuleWindow> _new_module_window;
 };
 
 FLOW_UI_NAMESPACE_END

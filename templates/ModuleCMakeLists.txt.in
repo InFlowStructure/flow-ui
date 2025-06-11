@@ -1,0 +1,23 @@
+cmake_minimum_required(VERSION 3.10)
+
+project({{name}} VERSION {{version}} LANGUAGES CXX)
+
+{{find_libs}}
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+if(APPLE)
+    enable_language(OBJC)
+endif()
+
+add_library(${PROJECT_NAME} SHARED src/register.cpp)
+target_compile_definitions(${PROJECT_NAME} PRIVATE {{export}})
+
+if(MSVC)
+  set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
+  target_compile_options(${PROJECT_NAME} PRIVATE /W4)
+endif()
+
+target_link_libraries(${PROJECT_NAME} PUBLIC {{dependencies}})
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${FLOW_INCLUDE_DIR})

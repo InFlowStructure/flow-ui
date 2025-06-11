@@ -1,0 +1,26 @@
+#include <flow/core/Core.hpp>
+#include <flow/core/NodeFactory.hpp>
+
+#ifdef FLOW_WINDOWS
+#ifdef {{export}}
+#define {{api}} __declspec(dllexport) FLOW_CORE_CALL
+#else
+#define {{api}} __declspec(dllimport) FLOW_CORE_CALL
+#endif
+#else
+#define {{api}}
+#endif
+
+extern "C"
+{
+namespace {{namespace}}
+{
+    void {{api}} RegisterModule(std::shared_ptr<flow::NodeFactory> factory)
+    {
+    }
+
+    void {{api}} UnregisterModule(std::shared_ptr<flow::NodeFactory> factory)
+    {
+    }
+}
+}

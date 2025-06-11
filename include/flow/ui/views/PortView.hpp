@@ -95,12 +95,6 @@ class PortView
     const flow::IndexableName& Key() const noexcept { return _port->GetKey(); }
 
     /**
-     * @brief Gets the name/label of the port.
-     * @returns The port's name.
-     */
-    std::string_view Name() const noexcept { return _port->GetVarName(); }
-
-    /**
      * @brief Gets the caption/description of the port.
      * @returns The port's caption.
      */
@@ -148,13 +142,16 @@ class PortView
     std::uint64_t ID;
 
     /// The owning NodeView ID.
-    const std::uint64_t& NodeID;
+    const std::uint64_t& NodeViewID;
 
     /// The type of port.
     PortType Kind = PortType::Input;
 
     /// Event run on setting a new value in the input field.
     InputEvent OnSetInput;
+
+    /// The name of the port.
+    std::string Name;
 
   private:
     std::shared_ptr<Port> _port;
