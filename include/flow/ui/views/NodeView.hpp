@@ -70,7 +70,7 @@ class NodeView : public GraphItemView
      * @param node The node to represent.
      * @param header_colour The colour of the node header.
      */
-    NodeView(flow::SharedNode node, Colour header_colour = Colour(40, 75, 99));
+    NodeView(const flow::SharedNode& node, Colour header_colour = Colour(40, 75, 99));
 
     virtual ~NodeView() = default;
 
@@ -86,6 +86,9 @@ class NodeView : public GraphItemView
     void ShowConnectables(const std::shared_ptr<PortView>& port) override;
 
   public:
+    /// The ID of the node this view is for.
+    UUID NodeID;
+
     /// The name of the Node.
     std::string Name;
 
@@ -97,9 +100,6 @@ class NodeView : public GraphItemView
 
     /// The colour of the header.
     Colour HeaderColour;
-
-    /// The node that is being represented.
-    flow::SharedNode Node;
 
   protected:
     std::shared_ptr<utility::NodeBuilder> _builder;
@@ -116,7 +116,7 @@ class SimpleNodeView : public NodeView
      * @brief Constructs a simple node view.
      * @param node The node being represented.
      */
-    SimpleNodeView(flow::SharedNode node);
+    SimpleNodeView(const flow::SharedNode& node);
 
     virtual ~SimpleNodeView() = default;
 

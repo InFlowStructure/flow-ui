@@ -13,6 +13,7 @@
 #include <flow/core/NodeData.hpp>
 #include <imgui_internal.h>
 #include <imgui_node_editor.h>
+#include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
 #include <map>
@@ -49,13 +50,13 @@ void DrawPinIcon(const PortView& pin, bool connected, int alpha)
 
 PortView::PortView(const std::uint64_t& node_id, std::shared_ptr<Port> port_data,
                    const std::shared_ptr<ViewFactory>& factory, InputEvent input_function, bool show_label)
-    : ID(std::hash<flow::UUID>{}({})), NodeID(node_id), _port{std::move(port_data)},
+    : ID(std::hash<flow::UUID>{}({})), NodeViewID(node_id), Name(port_data->GetVarName()), _port{std::move(port_data)},
       _show_label{_port->GetKey() != flow::IndexableName::None && show_label}, OnSetInput{input_function}
 {
     const auto& input_ctors = factory->GetRegisteredInputTypes();
     if (input_ctors.contains(std::string{Type()}))
     {
-        _input_field = input_ctors.at(std::string{Type()})(std::string{Name()}, _port->GetData());
+        _input_field = input_ctors.at(std::string{Type()})(Name, _port->GetData());
     }
 }
 
@@ -94,6 +95,7 @@ void PortView::Draw()
     {
         _builder->Output(ID);
         ImGui::PushStyleVar(ImGuiStyleVar_Alpha, _alpha);
+        ImGui::Spring(1);
         DrawLabel();
         DrawIcon(_alpha);
         ImGui::PopStyleVar();
@@ -106,7 +108,7 @@ constexpr std::string_view AnyType = flow::TypeName_v<std::any>;
 bool PortView::CanLink(const std::shared_ptr<PortView>& other) const noexcept
 {
     if (IsConnected() && Kind == PortType::Input || !other || ID == other->ID || Kind == other->Kind ||
-        NodeID == other->NodeID)
+        NodeViewID == other->NodeViewID)
     {
         return false;
     }
@@ -136,7 +138,7 @@ void PortView::DrawLabel()
     if (!_show_label) return;
 
     ImGui::AlignTextToFramePadding();
-    ImGui::TextUnformatted(std::string{Name().substr(0, Name().find("##"))}.c_str());
+    ImGui::TextUnformatted(std::string{Name.substr(0, Name.find("##"))}.c_str());
 }
 
 void PortView::DrawIcon(float alpha) { ::flow::ui::DrawPinIcon(*this, IsConnected(), static_cast<int>(alpha * 255)); }

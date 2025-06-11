@@ -18,6 +18,7 @@
 #include <imgui_node_editor.h>
 #include <imgui_node_editor_internal.h>
 #include <imgui_stdlib.h>
+#include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
 #include <set>
@@ -205,7 +206,7 @@ constexpr GraphWindow::ActionType operator&(const GraphWindow::ActionType& a, co
 }
 
 GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph)
-    : Window(graph->GetName()), _graph{std::move(graph)}, node_creation_context_menu{GetEnv()->GetFactory()}
+    : Window(graph->GetName()), _graph{std::move(graph)}, _node_creation_context_menu{GetEnv()->GetFactory()}
 {
     ed::Config config;
     config.UserPointer      = this;
@@ -249,9 +250,7 @@ GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph)
         ed_colours[utility::to_EdStyleColour(i)] = utility::to_ImColor(c);
     });
 
-    _graph->Visit([](const auto& node) { return node->Start(); });
-
-    node_creation_context_menu.OnSelection =
+    _node_creation_context_menu.OnSelection =
         [this, factory = std::dynamic_pointer_cast<ViewFactory>(GetEnv()->GetFactory())](const auto& class_name,
                                                                                          const auto& display_name) {
             CreateNode(class_name, display_name);
@@ -278,10 +277,10 @@ GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph)
                 auto end_pin = pin;
                 if (start_pin->Kind == PortType::Input) std::swap(start_pin, end_pin);
 
-                const auto& start_node = FindNode(start_pin->NodeID)->Node;
-                const auto& end_node   = FindNode(end_pin->NodeID)->Node;
-                const auto& conn =
-                    _graph->ConnectNodes(start_node->ID(), start_pin->Name(), end_node->ID(), end_pin->Name());
+                const auto& start_node = FindNode(start_pin->NodeViewID);
+                const auto& end_node   = FindNode(end_pin->NodeViewID);
+                const auto& conn       = _graph->ConnectNodes(start_node->NodeID, IndexableName{start_pin->Name},
+                                                              end_node->NodeID, IndexableName{end_pin->Name});
 
                 _links.emplace(std::hash<flow::UUID>{}(conn->ID()),
                                ConnectionView{conn->ID(), start_pin->ID, end_pin->ID, start_pin->GetColour()});
@@ -289,6 +288,8 @@ GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph)
             }
         }
     });
+
+    _graph->Visit([](const auto& node) { return node->Start(); });
 }
 
 GraphWindow::~GraphWindow()
@@ -319,7 +320,10 @@ void GraphWindow::Draw()
 try
 {
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_None;
-    if (_dirty) window_flags |= ImGuiWindowFlags_UnsavedDocument;
+    if (_dirty)
+    {
+        window_flags |= ImGuiWindowFlags_UnsavedDocument;
+    }
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 
@@ -355,21 +359,25 @@ try
 
     CleanupDeadItems();
 
-    for (auto& [_, item] : _item_views)
     {
-        item->ShowConnectables(_new_link_pin);
-        item->Draw();
-    }
+        std::lock_guard _(_mutex);
+        for (auto& [__, item] : _item_views)
+        {
+            item->ShowConnectables(_new_link_pin);
+            item->Draw();
+        }
 
-    for (auto& [_, link] : _links)
-    {
-        link.Draw();
+        for (auto& [__, link] : _links)
+        {
+            link.Draw();
+        }
     }
 
     ImGui::SetCursorScreenPos(cursorTopLeft);
 
     ed::Suspend();
 
+    // TODO: Do something more official here.
     static ed::NodeId context_node_id = 0;
     static ed::PinId context_pin_id   = 0;
 
@@ -465,7 +473,7 @@ try
         ImGui::EndPopup();
     }
 
-    node_creation_context_menu();
+    _node_creation_context_menu();
 
     ImGui::PopStyleColor();
     ImGui::PopStyleVar();
@@ -538,13 +546,17 @@ void GraphWindow::EndDraw()
     {
         ed::End();
     }
+
     ImGui::End();
     ImGui::PopStyleVar();
 }
 
 std::shared_ptr<NodeView> GraphWindow::FindNode(std::uint64_t id) const
 {
-    if (!id) throw std::invalid_argument("Node ID cannot be null");
+    if (!id)
+    {
+        throw std::invalid_argument("Node ID cannot be null");
+    }
 
     if (_item_views.contains(id))
     {
@@ -556,31 +568,44 @@ std::shared_ptr<NodeView> GraphWindow::FindNode(std::uint64_t id) const
 
 ConnectionView& GraphWindow::FindConnection(std::uint64_t id)
 {
-    if (!id) throw std::invalid_argument("Link ID cannot be null");
+    if (!id)
+    {
+        throw std::invalid_argument("Link ID cannot be null");
+    }
 
     return _links.at(id);
 }
 
 std::shared_ptr<PortView> GraphWindow::FindPort(std::uint64_t id) const
 {
-    if (!id) throw std::invalid_argument("Pin ID cannot be null");
+    if (!id)
+    {
+        throw std::invalid_argument("Pin ID cannot be null");
+    }
 
     for (auto& [_, item] : _item_views)
     {
         auto node = std::dynamic_pointer_cast<NodeView>(item);
-        if (!node) continue;
+        if (!node)
+        {
+            continue;
+        }
 
         for (auto& pin : node->Inputs)
+        {
             if (pin->ID == id)
             {
                 return pin;
             }
+        }
 
         for (auto& pin : node->Outputs)
+        {
             if (pin->ID == id)
             {
                 return pin;
             }
+        }
     }
 
     return nullptr;
@@ -588,7 +613,10 @@ std::shared_ptr<PortView> GraphWindow::FindPort(std::uint64_t id) const
 
 std::shared_ptr<CommentView> GraphWindow::FindComment(std::uint64_t id) const
 {
-    if (!id) throw std::invalid_argument("Comment ID cannot be null");
+    if (!id)
+    {
+        throw std::invalid_argument("Comment ID cannot be null");
+    }
 
     if (_item_views.contains(id))
     {
@@ -626,7 +654,7 @@ void GraphWindow::DeleteNode(std::uint64_t id)
             DeleteLink(link_id);
         }
 
-        _graph->RemoveNode(node->Node);
+        _graph->RemoveNodeByID(node->NodeID);
     }
 
     _item_views.erase(id);
@@ -644,10 +672,10 @@ bool GraphWindow::DeleteLink(std::uint64_t id)
     auto start_pin = FindPort(link.StartPortID);
     auto end_pin   = FindPort(link.EndPortID);
 
-    auto start_node = FindNode(start_pin->NodeID);
-    auto end_node   = FindNode(end_pin->NodeID);
+    auto start_node = FindNode(start_pin->NodeViewID);
+    auto end_node   = FindNode(end_pin->NodeViewID);
 
-    _graph->DisconnectNodes(start_node->Node->ID(), start_pin->Key(), end_node->Node->ID(), end_pin->Key());
+    _graph->DisconnectNodes(start_node->NodeID, start_pin->Key(), end_node->NodeID, end_pin->Key());
 
     return _links.erase(id) != 0;
 }
@@ -685,7 +713,7 @@ void GraphWindow::CreateItems()
                 std::swap(start_pin_id, end_pin_id);
             }
 
-            if (&end_pin == &start_pin || &start_pin->NodeID == &end_pin->NodeID || end_pin->IsConnected())
+            if (&end_pin == &start_pin || &start_pin->NodeViewID == &end_pin->NodeViewID || end_pin->IsConnected())
             {
                 ed::RejectNewItem(ImColor(255, 0, 0), 2.0f);
             }
@@ -711,10 +739,10 @@ void GraphWindow::CreateItems()
                 DrawLabel(label.c_str(), ImColor(32, 45, 32, 180));
                 if (ed::AcceptNewItem(ImColor(128, 255, 128), 4.0f))
                 {
-                    const auto& start_node = FindNode(start_pin->NodeID)->Node;
-                    const auto& end_node   = FindNode(end_pin->NodeID)->Node;
-                    const auto& conn =
-                        _graph->ConnectNodes(start_node->ID(), start_pin->Name(), end_node->ID(), end_pin->Name());
+                    const auto& start_node = FindNode(start_pin->NodeViewID);
+                    const auto& end_node   = FindNode(end_pin->NodeViewID);
+                    const auto& conn       = _graph->ConnectNodes(start_node->NodeID, IndexableName{start_pin->Name},
+                                                                  end_node->NodeID, IndexableName{end_pin->Name});
 
                     _links.emplace(std::hash<flow::UUID>{}(conn->ID()),
                                    ConnectionView{conn->ID(), start_pin->ID, end_pin->ID, start_pin->GetColour()});
@@ -776,9 +804,9 @@ void GraphWindow::OnLoadNode(const flow::SharedNode& node, const json& position_
     {
         auto view_factory = std::dynamic_pointer_cast<ViewFactory>(GetEnv()->GetFactory());
         node_view         = view_factory->CreateNodeView(node);
-        node_view->Node->OnSetOutput.Bind(
-            "ShowLinkFlowing",
-            [=, this, node_id = node->ID()](const IndexableName& key, auto) { ShowLinkFlowing(node_id, key); });
+        node->OnSetOutput.Bind("ShowLinkFlowing", [=, this, node_id = node->ID()](const IndexableName& key, auto) {
+            ShowLinkFlowing(node_id, key);
+        });
 
         _item_views.emplace(node_view->ID(), node_view);
     }
@@ -796,9 +824,9 @@ void GraphWindow::OnLoadConnection(const flow::SharedConnection& connection)
     auto end_node   = FindNode(end_node_id);
 
     auto start_pin = std::find_if(start_node->Outputs.begin(), start_node->Outputs.end(),
-                                  [&](auto&& pin) { return pin->Name() == connection->StartPortKey(); });
+                                  [&](auto&& pin) { return IndexableName{pin->Name} == connection->StartPortKey(); });
     auto end_pin   = std::find_if(end_node->Inputs.begin(), end_node->Inputs.end(),
-                                  [&](auto&& pin) { return pin->Name() == connection->EndPortKey(); });
+                                  [&](auto&& pin) { return IndexableName{pin->Name} == connection->EndPortKey(); });
 
     _links.emplace(std::hash<flow::UUID>{}(connection->ID()),
                    ConnectionView{connection->ID(), (*start_pin)->ID, (*end_pin)->ID, (*start_pin)->GetColour()});
@@ -991,10 +1019,11 @@ void GraphWindow::CreateNodesAction(const json& SPDLOG_json)
         auto start_node = FindNode(start_node_id);
         auto end_node   = FindNode(end_node_id);
 
-        auto start_pin = std::find_if(start_node->Outputs.begin(), start_node->Outputs.end(),
-                                      [&](auto&& pin) { return pin->Name() == connection->StartPortKey(); });
+        auto start_pin = std::find_if(start_node->Outputs.begin(), start_node->Outputs.end(), [&](auto&& pin) {
+            return IndexableName{pin->Name} == connection->StartPortKey();
+        });
         auto end_pin   = std::find_if(end_node->Inputs.begin(), end_node->Inputs.end(),
-                                      [&](auto&& pin) { return pin->Name() == connection->EndPortKey(); });
+                                      [&](auto&& pin) { return IndexableName{pin->Name} == connection->EndPortKey(); });
 
         _links.emplace(std::hash<flow::UUID>{}(connection->ID()),
                        ConnectionView{connection->ID(), (*start_pin)->ID, (*end_pin)->ID, (*start_pin)->GetColour()});

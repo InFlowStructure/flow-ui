@@ -39,7 +39,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(cmake/CPM.cmake)
 
-CPMAddPackage("gh:InFlowStructure/flow-core@1.2.0")
+CPMAddPackage("gh:InFlowStructure/flow-core#32a2e54")
 CPMAddPackage("gh:btzy/nativefiledialog-extended#29e3bcb")
 
 FetchContent_Declare(
@@ -139,7 +139,7 @@ add_library(flow-ui::flow-ui ALIAS flow-ui)
 
 if(MSVC)
   add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
-  target_compile_options(flow-ui PRIVATE /W4)
+  target_compile_options(flow-ui PRIVATE /W4 /MP)
 endif()
 
 target_include_directories(flow-ui

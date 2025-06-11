@@ -2,11 +2,12 @@
 
 #include "FileExplorer.hpp"
 #include "InputField.hpp"
-#include "ModuleInfo.hpp"
 #include "Text.hpp"
 #include "Widget.hpp"
 #include "utilities/Conversions.hpp"
 
+#include <flow/core/Env.hpp>
+#include <flow/core/Module.hpp>
 #include <imgui.h>
 #include <spdlog/spdlog.h>
 
@@ -27,61 +28,17 @@ const std::string module_binary_extension = ".so";
 class ModuleView : public Widget
 {
   public:
-    ModuleView(const std::filesystem::path& name, std::shared_ptr<Env> env, const ModuleInfo& info)
-        : _binary_path(name), _env(std::move(env)), _info(info),
-          _enabled(name.filename().replace_extension("").string(), true)
+    ModuleView(const std::filesystem::path& name, std::shared_ptr<Env> env)
+        : _binary_path(name), _enabled(name.filename().replace_extension("").string(), true)
     {
-        if (_enabled.GetValue())
-        {
-            _env->LoadModule(_binary_path);
-        }
-        else
-        {
-            _env->UnloadModule(_binary_path);
-        }
-    }
-
-    ModuleView(const std::filesystem::path& dir, std::shared_ptr<Env> env)
-        : _env(std::move(env)), _enabled(dir.filename().replace_extension("").string(), true)
-    {
-        std::filesystem::path module_path;
-        for (const auto& entry : std::filesystem::recursive_directory_iterator(dir))
-        {
-            if (!std::filesystem::is_regular_file(entry))
-            {
-                continue;
-            }
-
-            if (entry.path().extension() == "." + module_file_extension)
-            {
-                module_path = entry;
-            }
-
-            if (entry.path().extension() == module_binary_extension)
-            {
-                _binary_path = entry;
-            }
-        }
-
-        std::ifstream module_fs(module_path);
-        json module_j = json::parse(module_fs);
-        _info         = module_j;
-
-        if (_enabled.GetValue())
-        {
-            _env->LoadModule(_binary_path);
-        }
-        else
-        {
-            _env->UnloadModule(_binary_path);
-        }
+        _module = std::make_shared<Module>(_binary_path, env->GetFactory());
     }
 
     virtual void operator()() noexcept
     {
-        const std::string& name    = _binary_path.filename().replace_extension("").string();
-        const std::string& version = _info.Version;
-        const std::string& author  = _info.Author;
+        const std::string& name    = _module->GetName();
+        const std::string& version = "Version: " + _module->GetVersion();
+        const std::string& author  = _module->GetAuthor();
 
         ImGui::TableNextColumn();
 
@@ -92,17 +49,18 @@ class ModuleView : public Widget
         ImGui::BeginHorizontal(("module_" + name).c_str());
         widgets::Text{name}.SetFontSize(20.f)();
 
-        auto posX =
-            (ImGui::GetCursorPosX() + ImGui::GetColumnWidth() -
-             ImGui::CalcTextSize(author.length() > ("Version: " + version).length() ? author.c_str()
-                                                                                    : ("Version: " + version).c_str())
-                 .x +
-             -ImGui::GetScrollX() - 10 * ImGui::GetStyle().ItemSpacing.x);
-        if (posX > ImGui::GetCursorPosX()) ImGui::SetCursorPosX(posX);
+        auto pos_x = (ImGui::GetCursorPosX() + ImGui::GetColumnWidth() -
+                      ImGui::CalcTextSize(author.length() > version.length() ? author.c_str() : version.c_str()).x +
+                      -ImGui::GetScrollX() - 10 * ImGui::GetStyle().ItemSpacing.x);
+
+        if (pos_x > ImGui::GetCursorPosX())
+        {
+            ImGui::SetCursorPosX(pos_x);
+        }
 
         ImGui::BeginVertical("version/author");
         constexpr Colour version_author_colour{150, 150, 150};
-        widgets::Text{"Version: " + version}.SetFontSize(20.f).SetColour(version_author_colour)();
+        widgets::Text{version}.SetFontSize(20.f).SetColour(version_author_colour)();
         widgets::Text{author}.SetFontSize(18.f).SetColour(version_author_colour)();
         ImGui::EndVertical();
         ImGui::EndHorizontal();
@@ -111,19 +69,18 @@ class ModuleView : public Widget
         {
             if (_enabled.GetValue())
             {
-                _env->LoadModule(_binary_path);
+                _module->Load(_binary_path);
             }
             else
             {
-                _env->UnloadModule(_binary_path);
+                _module->Unload();
             }
         }
     }
 
   private:
     std::filesystem::path _binary_path;
-    std::shared_ptr<Env> _env;
-    ModuleInfo _info;
+    std::shared_ptr<Module> _module;
     widgets::Input<bool> _enabled;
 };
 
@@ -150,37 +107,10 @@ void ModuleManagerWindow::Draw()
         std::filesystem::create_directory(_modules_path);
 
         const auto filename =
-            FileExplorer::Load(FileExplorer::GetDocumentsPath(), "Flow Modules (flowmod)", module_file_extension);
+            FileExplorer::Load(FileExplorer::GetDocumentsPath(), "Flow Module (flowmod)", module_file_extension);
 
-        try
         {
-            std::ifstream module_fs(filename);
-            ModuleInfo module_info = json::parse(module_fs);
-
-            const std::string module_file_name = module_info.Name + module_binary_extension;
-            std::filesystem::path module_binary_path;
-            for (const auto& entry : std::filesystem::recursive_directory_iterator(filename.parent_path()))
-            {
-                if (!std::filesystem::is_regular_file(entry) || entry.path().filename() != module_file_name)
-                {
-                    continue;
-                }
-
-                module_binary_path = entry;
-                break;
-            }
-
-            std::filesystem::path module_path = _modules_path / module_info.Name;
-            std::filesystem::create_directory(module_path);
-
-            std::filesystem::copy_file(filename, module_path / filename.filename(),
-                                       std::filesystem::copy_options::overwrite_existing);
-            std::filesystem::copy_file(module_binary_path, module_path / module_binary_path.filename(),
-                                       std::filesystem::copy_options::overwrite_existing);
-        }
-        catch (const std::exception& e)
-        {
-            SPDLOG_ERROR("Caught exception while loading module {}: {}", filename.string(), e.what());
+            _widgets[filename.string()] = std::make_shared<ModuleView>(filename, _env);
         }
     }
 
@@ -201,7 +131,7 @@ void ModuleManagerWindow::Draw()
     }
     ImGui::EndHorizontal();
 
-    if (!std::filesystem::exists(_modules_path) || std::filesystem::is_empty(_modules_path))
+    if (_widgets.empty())
     {
         return Window::Draw();
     }
@@ -218,19 +148,9 @@ void ModuleManagerWindow::Draw()
     ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed);
     ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch);
 
-    for (const auto& module : std::filesystem::directory_iterator(_modules_path))
+    for (const auto& [_, w] : _widgets)
     {
-        if (!std::filesystem::is_directory(module))
-        {
-            continue;
-        }
-
-        const auto& module_name = module.path().string();
-        if (!_widgets.contains(module_name))
-        {
-            _widgets[module_name] = std::make_shared<ModuleView>(module.path(), _env);
-        }
-        (*_widgets.at(module_name))();
+        (*w)();
     }
 
     ImGui::EndTable();

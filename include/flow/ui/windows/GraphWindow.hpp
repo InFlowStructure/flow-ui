@@ -10,6 +10,7 @@
 
 #include <flow/core/Graph.hpp>
 #include <flow/core/NodeFactory.hpp>
+#include <nlohmann/json.hpp>
 
 #include <algorithm>
 #include <memory>
@@ -209,6 +210,7 @@ class GraphWindow : public Window
     flow::SharedNode CreateNode(const std::string& class_name, const std::string& display_name);
 
   private:
+    mutable std::mutex _mutex;
     std::unique_ptr<EditorContext> _editor_ctx;
     std::shared_ptr<flow::Graph> _graph;
 
@@ -221,9 +223,7 @@ class GraphWindow : public Window
     std::shared_ptr<PortView> _new_node_link_pin = nullptr;
     std::shared_ptr<PortView> _new_link_pin      = nullptr;
 
-    std::string node_lookup;
-
-    ContextMenu node_creation_context_menu;
+    ContextMenu _node_creation_context_menu;
 
     struct
     {
