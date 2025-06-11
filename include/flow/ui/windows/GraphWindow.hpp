@@ -20,6 +20,8 @@
 
 FLOW_UI_NAMESPACE_START
 
+using json = nlohmann::json;
+
 class ContextMenu : public Widget
 {
   public:

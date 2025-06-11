@@ -102,14 +102,6 @@ Editor::Editor(const std::string& initial_file)
     };
 }
 
-int return_test_method(const int& i, int& j) { return i * (j += 1); }
-void void_test_method(int i, int& j) { j = i * 1000; }
-void rvalue_test_method(int& i, int&& j)
-{
-    i = std::move(j);
-    return;
-}
-
 void Editor::Init(const std::string& initial_file)
 {
     _factory->OnNodeClassUnregistered.Bind("Unregister", [&](std::string_view class_name) {
@@ -135,11 +127,6 @@ void Editor::Init(const std::string& initial_file)
     });
 
     _factory->RegisterNodeClass<PreviewNode>("Editor", "Preview");
-
-    _factory->RegisterFunction<decltype(return_test_method), return_test_method>("TEST", "test_method");
-    _factory->RegisterFunction<decltype(void_test_method), void_test_method>("TEST", "void_test_method");
-    _factory->RegisterFunction<decltype(rvalue_test_method), rvalue_test_method>("TEST", "rvalue_test_method");
-
     _factory->RegisterNodeView<PreviewNodeView, PreviewNode>();
 
     _factory->RegisterInputType<bool>(false);

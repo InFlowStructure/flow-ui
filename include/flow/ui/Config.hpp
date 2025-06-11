@@ -17,9 +17,9 @@ FLOW_UI_NAMESPACE_END
  * Specialization to avoid trying to cleanup Fonts as they are unowned.
  */
 template<>
-struct std::default_delete<FLOW_UI_NAMESPACE::Font>
+struct std::default_delete<flow::ui::Font>
 {
-    void operator()(FLOW_UI_NAMESPACE::Font*) const {}
+    void operator()(flow::ui::Font*) const {}
 };
 
 FLOW_UI_NAMESPACE_START

@@ -39,7 +39,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(cmake/CPM.cmake)
 
-CPMAddPackage("gh:InFlowStructure/flow-core#32a2e54")
+CPMAddPackage("gh:InFlowStructure/flow-core#7253c7d")
 CPMAddPackage("gh:btzy/nativefiledialog-extended#29e3bcb")
 
 FetchContent_Declare(

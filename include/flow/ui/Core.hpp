@@ -7,20 +7,12 @@
 
 #include <memory>
 
-#define FLOW_UI_NAMESPACE FLOW_NAMESPACE::ui
-#define FLOW_UI_NAMESPACE_START                                                                                        \
-    /** The UI namespace. */                                                                                           \
-    namespace FLOW_UI_NAMESPACE                                                                                        \
-    {
-#define FLOW_UI_SUBNAMESPACE_START(n)                                                                                  \
-    namespace FLOW_UI_NAMESPACE                                                                                        \
-    {                                                                                                                  \
-    namespace n                                                                                                        \
-    {
+// clang-format off
+#define FLOW_UI_NAMESPACE_START namespace flow::ui {
+#define FLOW_UI_SUBNAMESPACE_START(nested) namespace flow::ui { namespace nested {
 #define FLOW_UI_NAMESPACE_END }
-#define FLOW_UI_SUBNAMESPACE_END                                                                                       \
-    }                                                                                                                  \
-    }
+#define FLOW_UI_SUBNAMESPACE_END } }
+// clang-format on
 
 FLOW_UI_NAMESPACE_START
 
@@ -29,9 +21,9 @@ class EditorContext;
 FLOW_UI_NAMESPACE_END
 
 template<>
-struct std::default_delete<FLOW_UI_NAMESPACE::EditorContext>
+struct std::default_delete<flow::ui::EditorContext>
 {
-    void operator()(FLOW_UI_NAMESPACE::EditorContext*) const {}
+    void operator()(flow::ui::EditorContext*) const {}
 };
 
 FLOW_UI_NAMESPACE_START
