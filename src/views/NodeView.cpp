@@ -10,6 +10,7 @@
 #include "utilities/Builders.hpp"
 #include "utilities/Conversions.hpp"
 #include "utilities/Widgets.hpp"
+#include "widgets/Text.hpp"
 
 #include <flow/core/Env.hpp>
 #include <flow/core/Port.hpp>
@@ -22,7 +23,7 @@
 #include <map>
 #include <vector>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 using namespace ax;
 namespace ed = ax::NodeEditor;
@@ -73,24 +74,22 @@ try : GraphItemView(std::hash<flow::UUID>{}(node->ID())), NodeID(node->ID()), Na
     auto ins = node->GetInputPorts();
 
     std::for_each(ins.begin(), ins.end(), [&](const auto p) { sorted_ports.emplace_back(p.second); });
-    std::sort(sorted_ports.begin(), sorted_ports.end(), std::less<flow::SharedPort>());
+    std::sort(sorted_ports.begin(), sorted_ports.end());
 
     auto view_factory = std::dynamic_pointer_cast<ViewFactory>(node->GetEnv()->GetFactory());
 
     Inputs.reserve(sorted_ports.size());
     for (const auto& input : sorted_ports)
     {
-        auto& in = Inputs.emplace_back(std::make_shared<PortView>(_id, input, view_factory, on_input));
-        in->Kind = PortType::Input;
-        in->SetBuilder(_builder);
+        auto& in = Inputs.emplace_back(std::make_shared<PortView>(PortType::Input, _id, input));
+        in->SetInputField(view_factory->CreateInputField(input));
+        in->OnSetInput = on_input;
     }
 
     Outputs.reserve(node->GetOutputPorts().size());
     for (const auto& [_, output] : node->GetOutputPorts())
     {
-        auto& out = Outputs.emplace_back(std::make_shared<PortView>(_id, output, view_factory, on_input));
-        out->Kind = PortType::Output;
-        out->SetBuilder(_builder);
+        Outputs.emplace_back(std::make_shared<PortView>(PortType::Output, _id, output));
     }
 }
 catch (const std::exception& e)
@@ -113,16 +112,7 @@ try
     _builder->Header(utility::to_ImColor(HeaderColour));
     ImGui::Spring(0);
 
-    if (GetConfig().NodeHeaderFont)
-    {
-        ImGui::PushFont(std::bit_cast<ImFont*>(GetConfig().NodeHeaderFont.get()));
-        ImGui::TextUnformatted(name);
-        ImGui::PopFont();
-    }
-    else
-    {
-        ImGui::TextUnformatted(name);
-    }
+    widgets::Text(name).SetFont(GetConfig().NodeHeaderFont).Draw();
 
     ImGui::Spring(1);
     ImGui::Dummy(ImVec2(0, 28));
@@ -135,12 +125,12 @@ try
                               ImGui::GetStyleColorVec4(ImGuiCol_FrameBg) - ImVec4(0.f, 0.f, 0.f, 25.f));
         for (auto& input : Inputs)
         {
-            input->Draw();
+            input->Draw(_builder);
         }
 
         for (auto& output : Outputs)
         {
-            output->Draw();
+            output->Draw(_builder);
         }
         ImGui::PopStyleColor();
     }
@@ -158,7 +148,7 @@ try
 }
 catch (const std::exception& e)
 {
-    SPDLOG_ERROR("Encounter and error while trying to draw node: {0}", e.what());
+    SPDLOG_ERROR("Encounter and error while trying to draw node'{0}': {1}", std::string(NodeID), e.what());
 }
 
 void NodeView::ShowConnectables(const std::shared_ptr<PortView>& new_link_pin)
@@ -203,7 +193,7 @@ try
     {
         for (auto& input : Inputs)
         {
-            input->Draw();
+            input->Draw(_builder);
         }
 
         _builder->Middle();
@@ -213,7 +203,7 @@ try
 
         for (auto& output : Outputs)
         {
-            output->Draw();
+            output->Draw(_builder);
         }
     }
     catch (const std::exception& e)

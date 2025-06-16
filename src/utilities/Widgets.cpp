@@ -5,7 +5,7 @@
 
 #include <imgui_internal.h>
 
-FLOW_UI_SUBNAMESPACE_START(widgets)
+FLOW_UI_SUBNAMESPACE_BEGIN(widgets)
 
 void Icon(const ImVec2& size, PortIconType type, bool filled, const ImVec4& color, const ImVec4& innerColor)
 {

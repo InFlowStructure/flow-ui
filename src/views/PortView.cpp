@@ -19,7 +19,7 @@
 #include <map>
 #include <vector>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 using namespace ax;
 namespace ed = ax::NodeEditor;
@@ -43,28 +43,22 @@ void DrawPinIcon(const PortView& pin, bool connected, int alpha)
 {
     auto colour = pin.GetColour();
     colour.A    = static_cast<std::uint8_t>(alpha);
-    widgets::Icon(ImVec2(24.f, 24.f), GetIconType(pin.Type()), connected, utility::to_ImColor(colour),
+    widgets::Icon(ImVec2(24.f, 24.f), GetIconType(pin.GetType()), connected, utility::to_ImColor(colour),
                   ImColor(32, 32, 32, alpha));
 }
 } // namespace
 
-PortView::PortView(const std::uint64_t& node_id, std::shared_ptr<Port> port_data,
-                   const std::shared_ptr<ViewFactory>& factory, InputEvent input_function, bool show_label)
+PortView::PortView(PortType type, const std::uint64_t& node_id, SharedPort port_data)
     : ID(std::hash<flow::UUID>{}({})), NodeViewID(node_id), Name(port_data->GetVarName()), _port{std::move(port_data)},
-      _show_label{_port->GetKey() != flow::IndexableName::None && show_label}, OnSetInput{input_function}
+      _show_label{_port->GetKey() != flow::IndexableName::None}, Type(type)
 {
-    const auto& input_ctors = factory->GetRegisteredInputTypes();
-    if (input_ctors.contains(std::string{Type()}))
-    {
-        _input_field = input_ctors.at(std::string{Type()})(Name, _port->GetData());
-    }
 }
 
-void PortView::Draw()
+void PortView::Draw(const std::shared_ptr<utility::NodeBuilder>& builder)
 {
-    if (Kind == PortType::Input)
+    if (Type == PortType::Input)
     {
-        _builder->Input(ID);
+        builder->Input(ID);
 
         ImGui::PushStyleVar(ImGuiStyleVar_Alpha, _alpha);
         DrawIcon(_alpha);
@@ -78,7 +72,7 @@ void PortView::Draw()
             ImGui::PopStyleVar();
         }
 
-        _builder->EndInput();
+        builder->EndInput();
 
         if (ImGui::IsItemActive() && !_was_active)
         {
@@ -91,15 +85,15 @@ void PortView::Draw()
             _was_active = false;
         }
     }
-    else if (Kind == PortType::Output)
+    else if (Type == PortType::Output)
     {
-        _builder->Output(ID);
+        builder->Output(ID);
         ImGui::PushStyleVar(ImGuiStyleVar_Alpha, _alpha);
         ImGui::Spring(1);
         DrawLabel();
         DrawIcon(_alpha);
         ImGui::PopStyleVar();
-        _builder->EndOutput();
+        builder->EndOutput();
     }
 }
 
@@ -107,21 +101,24 @@ constexpr std::string_view AnyType = flow::TypeName_v<std::any>;
 
 bool PortView::CanLink(const std::shared_ptr<PortView>& other) const noexcept
 {
-    if (IsConnected() && Kind == PortType::Input || !other || ID == other->ID || Kind == other->Kind ||
+    if (IsConnected() && Type == PortType::Input || !other || ID == other->ID || Type == other->Type ||
         NodeViewID == other->NodeViewID)
     {
         return false;
     }
 
-    return Type() == other->Type() || Type() == AnyType || other->Type() == AnyType;
+    return GetType() == other->GetType() || GetType() == AnyType || other->GetType() == AnyType;
 }
 
 void PortView::DrawInput()
 try
 {
-    if (!_input_field) return;
+    if (!_input_field)
+    {
+        return;
+    }
 
-    (*_input_field)();
+    _input_field->Draw();
 
     if (auto new_data = _input_field->GetData())
     {
@@ -143,16 +140,12 @@ void PortView::DrawLabel()
 
 void PortView::DrawIcon(float alpha) { ::flow::ui::DrawPinIcon(*this, IsConnected(), static_cast<int>(alpha * 255)); }
 
-void PortView::SetBuilder(std::shared_ptr<utility::NodeBuilder> builder) noexcept { _builder = std::move(builder); }
-
 void PortView::ShowConnectable(const std::shared_ptr<PortView>& new_link_pin)
 {
     _alpha = ImGui::GetStyle().Alpha;
-    if (new_link_pin && !CanLink(new_link_pin))
+    if (new_link_pin && new_link_pin.get() != this && !CanLink(new_link_pin))
     {
-        if (new_link_pin.get() == this) return;
-
-        _alpha *= (48.0f / 255.0f);
+        _alpha *= 0.2f;
     }
 }
 

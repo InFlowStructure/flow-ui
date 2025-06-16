@@ -7,7 +7,7 @@
 
 #include <imgui_node_editor.h>
 
-FLOW_UI_SUBNAMESPACE_START(utility)
+FLOW_UI_SUBNAMESPACE_BEGIN(utility)
 
 namespace ed = ax::NodeEditor;
 

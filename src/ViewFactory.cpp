@@ -7,7 +7,7 @@
 #undef GetClassName
 #endif
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 std::shared_ptr<NodeView> ViewFactory::CreateNodeView(flow::SharedNode node)
 {

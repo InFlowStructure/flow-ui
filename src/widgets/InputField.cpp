@@ -5,7 +5,7 @@
 
 #include <filesystem>
 
-FLOW_UI_SUBNAMESPACE_START(widgets)
+FLOW_UI_SUBNAMESPACE_BEGIN(widgets)
 
 template<typename T>
 Input<T>::Input(std::string name, const T& initial_value)
@@ -14,7 +14,7 @@ Input<T>::Input(std::string name, const T& initial_value)
 }
 
 template<typename T>
-void Input<T>::operator()() noexcept
+void Input<T>::Draw() noexcept
 {
     ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(36, 36, 36, 255));
     if (InputField<typename std::remove_cvref_t<T>>(_name, _value, ImGuiInputTextFlags_AutoSelectAll))

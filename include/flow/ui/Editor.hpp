@@ -4,13 +4,10 @@
 #pragma once
 
 #include "Config.hpp"
-#include "FileExplorer.hpp"
-#include "Style.hpp"
+#include "InputManager.hpp"
 #include "ViewFactory.hpp"
 #include "Window.hpp"
-#include "views/ConnectionView.hpp"
-#include "views/NodeView.hpp"
-#include "views/PortView.hpp"
+#include "WindowManager.hpp"
 #include "windows/GraphWindow.hpp"
 
 #include <flow/core/Env.hpp>
@@ -22,7 +19,7 @@
 #include <string>
 #include <vector>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 /**
  * @brief Main application class the holds and runs the graphs and other windows.
@@ -40,15 +37,6 @@ class Editor
      * @brief The main running method which renders the editor and all related windows.
      */
     void Run();
-
-    /**
-     * @brief Add a new custom window to the editor.
-     *
-     * @param new_window The new window to add to the editor.
-     * @param dockspace The default dockspace to attach the window to.
-     * @param show Flag to show or hide the window by default.
-     */
-    void AddWindow(std::shared_ptr<Window> new_window, const std::string& dockspace, bool show = true);
 
     /**
      * @brief Adds a new dockspace that windows can be docked to.
@@ -76,46 +64,34 @@ class Editor
     const std::shared_ptr<ViewFactory>& GetFactory() const noexcept { return _factory; }
 
     /**
-     * @brief Get a reference to the current editor context.
-     * @returns The pointer to the current editor context.
-     */
-    void* GetContext() const noexcept;
-
-    /**
-     * @brief Event that is run to load custom fonts for the editor.
-     */
-    Event<Config&> LoadFonts = [](auto&) {};
-
-    /**
-     * @brief Event that is run to setup a custom appearance of the editor.
-     */
-    Event<Style&> SetupStyle = [](auto&) {};
-
-    /**
      * @brief Event dispatcher that is run every time a new graph is marked as the active graph.
      */
     EventDispatcher<const std::shared_ptr<Graph>&> OnActiveGraphChanged;
 
   protected:
     void Init(const std::string& initial_file);
+
     void Teardown();
 
-    void HandleInput();
+    void SetupParams(const std::string& initial_file);
 
-    void DrawMainMenuBar();
+    void RegisterInputs();
 
-    std::shared_ptr<GraphWindow>& CreateFlow(std::string name);
+    void RegisterNodes();
+
+    void RegisterInputFieldTypes();
+
+    const std::shared_ptr<GraphWindow>& CreateFlow(const std::string& name = "");
+
     void LoadFlow(const std::filesystem::path& file = "");
+
     void SaveFlow();
 
   private:
     std::shared_ptr<ViewFactory> _factory = std::make_shared<ViewFactory>();
     std::shared_ptr<Env> _env             = Env::Create(_factory);
-
-    std::vector<std::shared_ptr<Window>> _windows;
-    std::unordered_map<UUID, std::shared_ptr<GraphWindow>> _graph_windows;
-    EventDispatcher<> OnGraphWindowAdded;
-    EventDispatcher<> OnGraphWindowRemoved;
+    std::unique_ptr<WindowManager> _window_manager;
+    std::unique_ptr<InputManager> _input_manager;
 };
 
 FLOW_UI_NAMESPACE_END

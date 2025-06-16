@@ -6,7 +6,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 
-FLOW_UI_SUBNAMESPACE_START(utility)
+FLOW_UI_SUBNAMESPACE_BEGIN(utility)
 
 void NodeBuilder::Begin(ed::NodeId id)
 {

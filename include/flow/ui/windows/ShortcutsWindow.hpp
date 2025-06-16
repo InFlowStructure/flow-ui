@@ -8,7 +8,7 @@
 #include <flow/core/Graph.hpp>
 #include <flow/core/NodeFactory.hpp>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 class ShortcutsWindow : public Window
 {

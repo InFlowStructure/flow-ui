@@ -5,11 +5,9 @@
 
 #include "Core.hpp"
 
-#include <flow/core/NodeData.hpp>
-
 #include <cstdint>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 /**
  * @brief Texture wrapper type. Access cached images or caches new ones.

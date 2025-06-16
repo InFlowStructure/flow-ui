@@ -16,7 +16,7 @@
 
 #include <any>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 struct PreviewNodeView : NodeView
 {
@@ -64,7 +64,7 @@ struct PreviewNodeView : NodeView
         const auto& input = *input_it;
         input->SetShowLabel(false);
 
-        input->Draw();
+        input->Draw(_builder);
 
         _builder->Middle();
 

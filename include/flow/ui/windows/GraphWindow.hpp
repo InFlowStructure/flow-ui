@@ -18,18 +18,18 @@
 #include <unordered_map>
 #include <vector>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 using json = nlohmann::json;
 
-class ContextMenu : public Widget
+class NodeContextMenu : public Widget
 {
   public:
-    ContextMenu(std::shared_ptr<NodeFactory> factory) : _factory(std::move(factory)) {}
+    NodeContextMenu(std::shared_ptr<NodeFactory> factory) : _factory(std::move(factory)) {}
 
-    virtual ~ContextMenu() = default;
+    virtual ~NodeContextMenu() = default;
 
-    virtual void operator()() noexcept override;
+    virtual void Draw() noexcept override;
 
   private:
     void DrawPopupCategory(const std::string& category, const flow::CategoryMap& registered_nodes);
@@ -195,6 +195,10 @@ class GraphWindow : public Window
     void MarkDirty(bool new_value) { _dirty = new_value; }
 
   private:
+    void Configure();
+
+    void SetStyle();
+
     void EndDraw();
 
     const std::shared_ptr<flow::Env>& GetEnv() const { return _graph->GetEnv(); }
@@ -225,7 +229,7 @@ class GraphWindow : public Window
     std::shared_ptr<PortView> _new_node_link_pin = nullptr;
     std::shared_ptr<PortView> _new_link_pin      = nullptr;
 
-    ContextMenu _node_creation_context_menu;
+    NodeContextMenu _node_creation_context_menu;
 
     struct
     {

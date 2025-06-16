@@ -2,7 +2,7 @@
 
 #include "Core.hpp"
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 /**
  * @brief Abstract base widget class.
@@ -15,7 +15,7 @@ class Widget
     /**
      * @brief Drawing function for widgets.
      */
-    virtual void operator()() noexcept = 0;
+    virtual void Draw() noexcept = 0;
 };
 
 FLOW_UI_NAMESPACE_END

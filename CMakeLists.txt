@@ -104,10 +104,12 @@ add_library(flow-ui SHARED
   src/Core.cpp
   src/Editor.cpp
   src/FileExplorer.cpp
+  src/InputManager.cpp
   src/Style.cpp
   src/Texture.cpp
   src/ViewFactory.cpp
   src/Window.cpp
+  src/WindowManager.cpp
 
   # View source files
   src/views/ConnectionView.cpp

@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-FLOW_UI_SUBNAMESPACE_START(widgets)
+FLOW_UI_SUBNAMESPACE_BEGIN(widgets)
 
 /**
  * @brief Property tree widget for showing user defined properties in a collapsable tree table.
@@ -45,7 +45,7 @@ class PropertyTree : public Widget
     /**
      * @brief Renders the property tree widget to the windows.
      */
-    virtual void operator()() noexcept override;
+    virtual void Draw() noexcept override;
 
   private:
     std::map<std::string, std::map<std::string, std::vector<std::shared_ptr<Widget>>>> _properties;

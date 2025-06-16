@@ -5,7 +5,7 @@
 #include "widgets/InputField.hpp"
 #include "widgets/Table.hpp"
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 class NewModuleWindow : public Window
 {

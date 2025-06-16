@@ -12,12 +12,12 @@
 #include <memory>
 #include <string>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 class PropertyWindow : public Window
 {
   public:
-    PropertyWindow(std::shared_ptr<flow::Env> env);
+    PropertyWindow();
     virtual ~PropertyWindow() = default;
 
     virtual void Draw() override;
@@ -27,7 +27,6 @@ class PropertyWindow : public Window
     static inline const std::string Name = "Properties";
 
   private:
-    std::weak_ptr<flow::Env> _env;
     std::weak_ptr<flow::Graph> _graph;
 };
 

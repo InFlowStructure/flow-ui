@@ -25,12 +25,12 @@
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ImVec2, x, y);
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 using namespace ax;
 namespace ed = ax::NodeEditor;
 
-void ContextMenu::operator()() noexcept
+void NodeContextMenu::Draw() noexcept
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(5, 5));
     ImGui::PushStyleColor(ImGuiCol_PopupBg, IM_COL32(15, 15, 15, 240));
@@ -113,7 +113,7 @@ void ContextMenu::operator()() noexcept
     ImGui::PopStyleVar();
 }
 
-void ContextMenu::DrawPopupCategory(const std::string& category, const flow::CategoryMap& registered_nodes)
+void NodeContextMenu::DrawPopupCategory(const std::string& category, const flow::CategoryMap& registered_nodes)
 {
     if (!ImGui::TreeNodeEx(category.c_str(), node_lookup.empty() ? 0 : ImGuiTreeNodeFlags_DefaultOpen)) return;
 
@@ -208,89 +208,50 @@ constexpr GraphWindow::ActionType operator&(const GraphWindow::ActionType& a, co
 GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph)
     : Window(graph->GetName()), _graph{std::move(graph)}, _node_creation_context_menu{GetEnv()->GetFactory()}
 {
-    ed::Config config;
-    config.UserPointer      = this;
-    config.EnableSmoothZoom = true;
-    config.SettingsFile     = "";
-    config.CanvasSizeMode   = ed::CanvasSizeMode::CenterOnly;
+    Configure();
+    SetStyle();
 
-    config.SaveNodeSettings = []([[maybe_unused]] ed::NodeId nodeId, [[maybe_unused]] const char* data,
-                                 [[maybe_unused]] std::size_t size, ed::SaveReasonFlags reason,
-                                 void* userPointer) -> bool {
-        if (reason == ed::SaveReasonFlags::None)
-        {
-            SPDLOG_TRACE("Nothing happened during node save.");
-            return true;
-        }
-
-        GraphWindow* self = std::bit_cast<GraphWindow*>(userPointer);
-
-        if ((reason & ed::SaveReasonFlags::Position) == ed::SaveReasonFlags::Position ||
-            (reason & ed::SaveReasonFlags::AddNode) == ed::SaveReasonFlags::AddNode ||
-            (reason & ed::SaveReasonFlags::RemoveNode) == ed::SaveReasonFlags::RemoveNode ||
-            (reason & ed::SaveReasonFlags::Size) == ed::SaveReasonFlags::Size ||
-            (reason & ed::SaveReasonFlags::User) == ed::SaveReasonFlags::User)
-        {
-            self->MarkDirty(true);
-        }
-
-        return true;
+    _node_creation_context_menu.OnSelection = [this](const auto& class_name, const auto& display_name) {
+        CreateNode(class_name, display_name);
+        ImGui::CloseCurrentPopup();
     };
-
-    _editor_ctx = std::unique_ptr<EditorContext>(std::bit_cast<EditorContext*>(ed::CreateEditor(&config)));
-
-    // Set initial view state
-    ed::SetCurrentEditor(std::bit_cast<ed::EditorContext*>(_editor_ctx.get()));
-    ed::NavigateToContent(0.0f); // Navigate without animation
-
-    auto& ed_style           = GetEditorDetailContext(GetEditorContext())->GetStyle();
-    ed_style.NodeBorderWidth = 0.5f;
-    ed_style.FlowDuration    = 1.f;
-
-    auto& ed_colours = ed_style.Colors;
-    auto& colours    = GetStyle().Colours.EditorColours;
-
-    std::for_each(std::begin(colours), std::end(colours), [&](const auto& p) {
-        const auto& [i, c]                       = p;
-        ed_colours[utility::to_EdStyleColour(i)] = utility::to_ImColor(c);
-    });
-
-    _node_creation_context_menu.OnSelection =
-        [this, factory = std::dynamic_pointer_cast<ViewFactory>(GetEnv()->GetFactory())](const auto& class_name,
-                                                                                         const auto& display_name) {
-            CreateNode(class_name, display_name);
-            ImGui::CloseCurrentPopup();
-        };
 
     _graph->OnNodeAdded.Bind("CreateNodeView", [this](const auto& n) {
         const auto factory = std::dynamic_pointer_cast<ViewFactory>(GetEnv()->GetFactory());
         auto node_view     = factory->CreateNodeView(n);
         _item_views.emplace(node_view->ID(), node_view);
+
         ed::SetNodePosition(node_view->ID(), {_open_popup_position.x, _open_popup_position.y});
 
-        if (auto start_pin = _new_node_link_pin)
+        if (!_new_node_link_pin)
         {
-            auto& pins = start_pin->Kind == PortType::Input ? node_view->Outputs : node_view->Inputs;
-            for (auto& pin : pins)
+            return;
+        }
+
+        auto start_pin = _new_node_link_pin;
+        auto& pins     = start_pin->Type == PortType::Input ? node_view->Outputs : node_view->Inputs;
+        for (auto& pin : pins)
+        {
+            if (!start_pin->CanLink(pin) && !(factory->IsConvertible(start_pin->GetType(), pin->GetType()) ||
+                                              factory->IsConvertible(pin->GetType(), start_pin->GetType())))
             {
-                if (!start_pin->CanLink(pin) && !(factory->IsConvertible(start_pin->Type(), pin->Type()) ||
-                                                  factory->IsConvertible(pin->Type(), start_pin->Type())))
-                {
-                    continue;
-                }
-
-                auto end_pin = pin;
-                if (start_pin->Kind == PortType::Input) std::swap(start_pin, end_pin);
-
-                const auto& start_node = FindNode(start_pin->NodeViewID);
-                const auto& end_node   = FindNode(end_pin->NodeViewID);
-                const auto& conn       = _graph->ConnectNodes(start_node->NodeID, IndexableName{start_pin->Name},
-                                                              end_node->NodeID, IndexableName{end_pin->Name});
-
-                _links.emplace(std::hash<flow::UUID>{}(conn->ID()),
-                               ConnectionView{conn->ID(), start_pin->ID, end_pin->ID, start_pin->GetColour()});
-                break;
+                continue;
             }
+
+            auto end_pin = pin;
+            if (start_pin->Type == PortType::Input)
+            {
+                std::swap(start_pin, end_pin);
+            }
+
+            const auto& start_node = FindNode(start_pin->NodeViewID);
+            const auto& end_node   = FindNode(end_pin->NodeViewID);
+            const auto& conn       = _graph->ConnectNodes(start_node->NodeID, IndexableName{start_pin->Name},
+                                                          end_node->NodeID, IndexableName{end_pin->Name});
+
+            _links.emplace(std::hash<flow::UUID>{}(conn->ID()),
+                           ConnectionView{conn->ID(), start_pin->ID, end_pin->ID, start_pin->GetColour()});
+            break;
         }
     });
 
@@ -304,20 +265,22 @@ GraphWindow::~GraphWindow()
 
     _links.clear();
 
-    if (ed::GetCurrentEditor() == std::bit_cast<ed::EditorContext*>(_editor_ctx.get()))
+    auto* ctx = std::bit_cast<ed::EditorContext*>(_editor_ctx.get());
+    if (ed::GetCurrentEditor() == ctx)
     {
         ed::SetCurrentEditor(nullptr);
     }
 
-    ed::DestroyEditor(std::bit_cast<ed::EditorContext*>(_editor_ctx.get()));
+    ed::DestroyEditor(ctx);
     _editor_ctx.reset();
 }
 
 void GraphWindow::SetCurrentGraph()
 {
-    if (std::bit_cast<ed::EditorContext*>(_editor_ctx.get()) != ed::GetCurrentEditor())
+    auto* ctx = std::bit_cast<ed::EditorContext*>(_editor_ctx.get());
+    if (ctx != ed::GetCurrentEditor())
     {
-        ed::SetCurrentEditor(std::bit_cast<ed::EditorContext*>(_editor_ctx.get()));
+        ed::SetCurrentEditor(ctx);
     }
 }
 
@@ -342,7 +305,7 @@ try
     SetCurrentGraph();
     ed::Begin(_graph->GetName().c_str());
 
-    auto cursorTopLeft = ImGui::GetCursorScreenPos();
+    const auto cursor_top_left = ImGui::GetCursorScreenPos();
 
     CreateItems();
 
@@ -378,7 +341,7 @@ try
         }
     }
 
-    ImGui::SetCursorScreenPos(cursorTopLeft);
+    ImGui::SetCursorScreenPos(cursor_top_left);
 
     ed::Suspend();
 
@@ -478,7 +441,7 @@ try
         ImGui::EndPopup();
     }
 
-    _node_creation_context_menu();
+    _node_creation_context_menu.Draw();
 
     ImGui::PopStyleColor();
     ImGui::PopStyleVar();
@@ -543,6 +506,58 @@ catch (...)
 {
     SPDLOG_ERROR("Caught unknown exception while drawing graph");
     EndDraw();
+}
+
+void GraphWindow::Configure()
+{
+    ed::Config config;
+    config.UserPointer      = this;
+    config.EnableSmoothZoom = true;
+    config.SettingsFile     = "";
+    config.CanvasSizeMode   = ed::CanvasSizeMode::CenterOnly;
+
+    config.SaveNodeSettings = []([[maybe_unused]] ed::NodeId nodeId, [[maybe_unused]] const char* data,
+                                 [[maybe_unused]] std::size_t size, ed::SaveReasonFlags reason,
+                                 void* userPointer) -> bool {
+        if (reason == ed::SaveReasonFlags::None)
+        {
+            SPDLOG_TRACE("Nothing happened during node save.");
+            return true;
+        }
+
+        GraphWindow* self = std::bit_cast<GraphWindow*>(userPointer);
+
+        if ((reason & ed::SaveReasonFlags::Position) == ed::SaveReasonFlags::Position ||
+            (reason & ed::SaveReasonFlags::AddNode) == ed::SaveReasonFlags::AddNode ||
+            (reason & ed::SaveReasonFlags::RemoveNode) == ed::SaveReasonFlags::RemoveNode ||
+            (reason & ed::SaveReasonFlags::Size) == ed::SaveReasonFlags::Size ||
+            (reason & ed::SaveReasonFlags::User) == ed::SaveReasonFlags::User)
+        {
+            self->MarkDirty(true);
+        }
+
+        return true;
+    };
+
+    _editor_ctx = std::unique_ptr<EditorContext>(std::bit_cast<EditorContext*>(ed::CreateEditor(&config)));
+}
+
+void GraphWindow::SetStyle()
+{
+    auto& style           = GetEditorDetailContext(GetEditorContext())->GetStyle();
+    style.NodeBorderWidth = 0.5f;
+    style.FlowDuration    = 1.f;
+
+    auto& colours                               = style.Colors;
+    colours[ed::StyleColor_Bg]                  = ImColor(38, 38, 38);
+    colours[ed::StyleColor_Grid]                = ImColor(52, 52, 52);
+    colours[ed::StyleColor_NodeBg]              = ImColor(15, 17, 15, 240);
+    colours[ed::StyleColor_NodeBorder]          = ImColor(0, 0, 0);
+    colours[ed::StyleColor_SelNodeBorder]       = ImColor(255, 255, 255);
+    colours[ed::StyleColor_Flow]                = ImColor(32, 191, 85);
+    colours[ed::StyleColor_FlowMarker]          = ImColor(32, 191, 85);
+    colours[ed::StyleColor_HighlightLinkBorder] = ImColor(0, 188, 235);
+    colours[ed::StyleColor_SelLinkBorder]       = ImColor(0, 188, 235);
 }
 
 void GraphWindow::EndDraw()
@@ -712,7 +727,7 @@ void GraphWindow::CreateItems()
         {
             _new_link_pin = start_pin;
 
-            if (start_pin->Kind == PortType::Input)
+            if (start_pin->Type == PortType::Input)
             {
                 std::swap(start_pin, end_pin);
                 std::swap(start_pin_id, end_pin_id);
@@ -722,12 +737,12 @@ void GraphWindow::CreateItems()
             {
                 ed::RejectNewItem(ImColor(255, 0, 0), 2.0f);
             }
-            else if (end_pin->Kind == start_pin->Kind)
+            else if (end_pin->Type == start_pin->Type)
             {
-                DrawLabel("x Incompatible Pin Kind", ImColor(45, 32, 32, 180));
+                DrawLabel("x Incompatible Pin Type", ImColor(45, 32, 32, 180));
                 ed::RejectNewItem(ImColor(255, 0, 0), 2.0f);
             }
-            else if (!GetEnv()->GetFactory()->IsConvertible(start_pin->Type(), end_pin->Type()))
+            else if (!GetEnv()->GetFactory()->IsConvertible(start_pin->GetType(), end_pin->GetType()))
             {
                 DrawLabel("x Incompatible Pin Type", ImColor(45, 32, 32, 180));
                 ed::RejectNewItem(ImColor(255, 128, 128), 1.0f);
@@ -735,8 +750,8 @@ void GraphWindow::CreateItems()
             else
             {
                 std::string label = "+ Create Link";
-                if (start_pin->Type() != end_pin->Type() &&
-                    GetEnv()->GetFactory()->IsConvertible(start_pin->Type(), end_pin->Type()))
+                if (start_pin->GetType() != end_pin->GetType() &&
+                    GetEnv()->GetFactory()->IsConvertible(start_pin->GetType(), end_pin->GetType()))
                 {
                     label = "+ Create Converting Link";
                 }
