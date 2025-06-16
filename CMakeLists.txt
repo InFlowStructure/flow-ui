@@ -42,10 +42,11 @@ include(cmake/CPM.cmake)
 CPMAddPackage("gh:InFlowStructure/flow-core#7253c7d")
 CPMAddPackage("gh:btzy/nativefiledialog-extended#29e3bcb")
 
+include(FetchContent)
 FetchContent_Declare(
   imgui
   GIT_REPOSITORY https://github.com/pthom/imgui.git
-  GIT_TAG        imgui_bundle
+  GIT_TAG        bundle_20250323
 )
 FetchContent_Declare(
   imgui_node_editor
@@ -66,7 +67,6 @@ endif()
 
 CPMAddPackage("gh:pthom/hello_imgui#c985031")
 
-include(FetchContent)
 include(cmake/add_libs.cmake)
 include(${hello_imgui_SOURCE_DIR}/hello_imgui_cmake/msvc/msvc_target_group.cmake)
 
