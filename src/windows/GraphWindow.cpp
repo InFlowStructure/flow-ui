@@ -316,10 +316,8 @@ try
             std::string class_name   = reinterpret_cast<const char*>(payload->Data);
             std::string display_name = GetEnv()->GetFactory()->GetFriendlyName(class_name);
 
-            _graph->OnNodeAdded.Bind(
-                "SetPos", [](auto&& n) { ed::SetNodePosition(std::hash<UUID>{}(n->ID()), ImGui::GetMousePos()); });
-            CreateNode(class_name, display_name);
-            _graph->OnNodeAdded.Unbind("SetPos");
+            const auto& node = CreateNode(class_name, display_name);
+            ed::SetNodePosition(std::hash<UUID>{}(node->ID()), ImGui::GetMousePos());
         }
 
         ImGui::EndDragDropTarget();
