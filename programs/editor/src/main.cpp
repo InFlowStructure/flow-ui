@@ -9,6 +9,8 @@
 #include <iostream>
 
 int main(int argc, char** argv)
+
+try
 {
     std::string filename;
 
@@ -51,21 +53,17 @@ int main(int argc, char** argv)
 #endif
 
     flow::ui::Editor app(filename);
-
-    try
-    {
-        app.Run();
-    }
-    catch (const std::exception& e)
-    {
-        SPDLOG_CRITICAL("Exiting with error: {0}", e.what());
-        return EXIT_FAILURE;
-    }
-    catch (...)
-    {
-        SPDLOG_CRITICAL("Exiting with unknown error");
-        return EXIT_FAILURE;
-    }
+    app.Run();
 
     return EXIT_SUCCESS;
+}
+catch (const std::exception& e)
+{
+    SPDLOG_CRITICAL("Exiting with error: {0}", e.what());
+    return EXIT_FAILURE;
+}
+catch (...)
+{
+    SPDLOG_CRITICAL("Exiting with unknown error");
+    return EXIT_FAILURE;
 }

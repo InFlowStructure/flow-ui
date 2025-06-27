@@ -10,6 +10,9 @@
 
 FLOW_UI_SUBNAMESPACE_BEGIN(widgets)
 
+template<typename T>
+static inline bool InputField(std::string_view name, T& value, int flags);
+
 /**
  * @brief Input field interface class.
  */

@@ -43,9 +43,14 @@ void Text::Draw() noexcept
 
     ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(_colour.R, _colour.G, _colour.B, _colour.A));
 
+    if (!_font)
+    {
+        _font = reinterpret_cast<void*>(ImGui::GetFont());
+    }
+
     auto* font = reinterpret_cast<ImFont*>(_font);
 
-    float old_font_size = ImGui::GetFont()->Scale;
+    float old_font_size = font->Scale;
     font->Scale         = _font_size / font->FontSize;
     ImGui::PushFont(font);
 

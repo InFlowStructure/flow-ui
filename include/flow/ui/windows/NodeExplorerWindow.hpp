@@ -23,6 +23,9 @@ class NodeExplorerWindow : public Window
   private:
     void DrawPopupCategory(const std::string& category, const flow::CategoryMap& registered_nodes);
 
+  public:
+    Event<const std::string&, const std::string&> OnSelection;
+
   private:
     std::shared_ptr<Env> _env;
     std::shared_ptr<Graph> _active_graph;

@@ -104,7 +104,7 @@ add_library(flow-ui SHARED
   src/Core.cpp
   src/Editor.cpp
   src/FileExplorer.cpp
-  src/InputManager.cpp
+  src/CommandManager.cpp
   src/Style.cpp
   src/Texture.cpp
   src/ViewFactory.cpp
@@ -131,7 +131,7 @@ add_library(flow-ui SHARED
   src/widgets/Text.cpp
 
   # Utility files
-  src/utilities/Builders.cpp
+  src/utilities/NodeBuilder.cpp
   src/utilities/Widgets.cpp
 
   ${flow-ui_HEADERS}

@@ -5,7 +5,7 @@
 
 #include "ConnectionView.hpp"
 #include "ViewFactory.hpp"
-#include "utilities/Builders.hpp"
+#include "utilities/NodeBuilder.hpp"
 #include "utilities/Conversions.hpp"
 #include "utilities/Widgets.hpp"
 

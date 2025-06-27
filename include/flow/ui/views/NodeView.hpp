@@ -85,6 +85,13 @@ class NodeView : public GraphItemView
      */
     void ShowConnectables(const std::shared_ptr<PortView>& port) override;
 
+  protected:
+    void DrawHeader();
+
+    void DrawInputs();
+
+    void DrawOutputs();
+
   public:
     /// The ID of the node this view is for.
     UUID NodeID;

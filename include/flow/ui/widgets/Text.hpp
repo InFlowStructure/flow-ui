@@ -96,7 +96,7 @@ class Text : public Widget
     std::string _text;
     Colour _colour;
     Alignment _align = {HorizontalAlignment::Left, VerticalAlignment::Top};
-    void* _font      = nullptr;
+    void* _font;
     float _font_size = 18.f;
 };
 

@@ -37,14 +37,24 @@ FLOW_UI_NAMESPACE_BEGIN
 
 using namespace ax;
 namespace ed = ax::NodeEditor;
+HelloImGui::RunnerParams _params;
+
+void AddDockspace(std::string name, std::string initial_dockspace_name, float ratio, ImGuiDir direction)
+{
+    HelloImGui::DockingSplit split;
+    split.initialDock = std::move(initial_dockspace_name);
+    split.newDock     = std::move(name);
+    split.direction   = direction;
+    split.ratio       = ratio;
+
+    _params.dockingParams.dockingSplits.push_back(std::move(split));
+}
 
 const std::filesystem::path default_save_path    = FileExplorer::GetDocumentsPath() / "flows";
 const std::filesystem::path default_modules_path = FileExplorer::GetExecutablePath() / "modules";
 
-HelloImGui::RunnerParams _params;
-
 Editor::Editor(const std::string& initial_file)
-    : _window_manager(std::make_unique<WindowManager>()), _input_manager(std::make_unique<InputManager>())
+    : _window_manager(std::make_unique<WindowManager>()), _input_manager(std::make_unique<CommandManager>())
 {
     SetupParams(initial_file);
 }
@@ -55,10 +65,10 @@ void Editor::Init(const std::string& initial_file)
     RegisterNodes();
     RegisterInputFieldTypes();
 
-    AddDockspace(PropertyDockspace, DefaultDockspace, 0.25f, DockspaceSplitDirection::Left);
-    AddDockspace("PropertySubSpace", PropertyDockspace, 0.5f, DockspaceSplitDirection::Down);
-    AddDockspace("ToolbarSpace", DefaultDockspace, 0.1f, DockspaceSplitDirection::Up);
-    AddDockspace("MiscSpace", DefaultDockspace, 0.25f, DockspaceSplitDirection::Down);
+    AddDockspace(PropertyDockspace, DefaultDockspace, 0.25f, ImGuiDir_Left);
+    AddDockspace("PropertySubSpace", PropertyDockspace, 0.5f, ImGuiDir_Down);
+    AddDockspace("ToolbarSpace", DefaultDockspace, 0.1f, ImGuiDir_Up);
+    AddDockspace("MiscSpace", DefaultDockspace, 0.25f, ImGuiDir_Down);
 
     auto node_explorer = std::make_shared<NodeExplorerWindow>(GetEnv());
     _window_manager->OnActiveGraphChanged.Bind(flow::IndexableName{node_explorer->GetName()},
@@ -116,10 +126,7 @@ void Editor::SetupParams(const std::string& initial_file)
 #pragma endregion
 
 #pragma region Callbacks
-    _params.callbacks.PostInit = [&] {
-        GetConfig().RenderBackend = utility::to_RendererBackend(_params.rendererBackendType);
-        Init(initial_file);
-    };
+    _params.callbacks.PostInit = [&] { Init(initial_file); };
 
     _params.callbacks.BeforeExit = [&] { Teardown(); };
 
@@ -222,19 +229,19 @@ void Editor::SetupParams(const std::string& initial_file)
 void Editor::RegisterInputs()
 {
     // New Graph (Ctrl + N)
-    _input_manager->AddInputEvent(ImGuiMod_Ctrl | ImGuiKey_N, [&] { CreateFlow(); });
+    _input_manager->AddCommand(ImGuiMod_Ctrl | ImGuiKey_N, [&] { CreateFlow(); });
 
     // Open Flow file (Ctrl + O)
-    _input_manager->AddInputEvent(ImGuiMod_Ctrl | ImGuiKey_O, [&] { LoadFlow(); });
+    _input_manager->AddCommand(ImGuiMod_Ctrl | ImGuiKey_O, [&] { LoadFlow(); });
 
     // Save current flow file (Ctrl + S)
-    _input_manager->AddInputEvent(ImGuiMod_Ctrl | ImGuiKey_S, [&] { SaveFlow(); });
+    _input_manager->AddCommand(ImGuiMod_Ctrl | ImGuiKey_S, [&] { SaveFlow(); });
 
     // Save current flow file as (Ctrl + Alt + S)
-    _input_manager->AddInputEvent(ImGuiMod_Ctrl | ImGuiMod_Alt | ImGuiKey_S, [&] { SaveFlow(); });
+    _input_manager->AddCommand(ImGuiMod_Ctrl | ImGuiMod_Alt | ImGuiKey_S, [&] { SaveFlow(); });
 
     // Close current active graph window (Ctrl + W)
-    _input_manager->AddInputEvent(ImGuiMod_Ctrl | ImGuiKey_W, [&] { _window_manager->CloseActiveGraphWindow(); });
+    _input_manager->AddCommand(ImGuiMod_Ctrl | ImGuiKey_W, [&] { _window_manager->CloseActiveGraphWindow(); });
 }
 
 void Editor::RegisterNodes()
@@ -276,18 +283,6 @@ void Editor::RegisterInputFieldTypes()
 }
 
 void Editor::Run() { HelloImGui::Run(_params); }
-
-void Editor::AddDockspace(std::string name, std::string initial_dockspace_name, float ratio,
-                          DockspaceSplitDirection direction)
-{
-    HelloImGui::DockingSplit split;
-    split.initialDock = std::move(initial_dockspace_name);
-    split.newDock     = std::move(name);
-    split.direction   = utility::to_ImGuiDir(direction);
-    split.ratio       = ratio;
-
-    _params.dockingParams.dockingSplits.push_back(std::move(split));
-}
 
 const std::shared_ptr<GraphWindow>& Editor::CreateFlow(const std::string& name)
 {

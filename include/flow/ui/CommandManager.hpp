@@ -11,12 +11,12 @@
 
 FLOW_UI_NAMESPACE_BEGIN
 
-class InputManager
+class CommandManager
 {
   public:
     void Handle();
 
-    void AddInputEvent(int key_chord, Event<>&& event);
+    void AddCommand(int key_chord, Event<>&& event);
 
   private:
     std::map<int, Event<>> _input_events;

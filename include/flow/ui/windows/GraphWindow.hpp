@@ -7,6 +7,7 @@
 #include "flow/ui/Widget.hpp"
 #include "flow/ui/Window.hpp"
 #include "flow/ui/views/NodeView.hpp"
+#include "flow/ui/windows/NodeExplorerWindow.hpp"
 
 #include <flow/core/Graph.hpp>
 #include <flow/core/NodeFactory.hpp>
@@ -21,27 +22,6 @@
 FLOW_UI_NAMESPACE_BEGIN
 
 using json = nlohmann::json;
-
-class NodeContextMenu : public Widget
-{
-  public:
-    NodeContextMenu(std::shared_ptr<NodeFactory> factory) : _factory(std::move(factory)) {}
-
-    virtual ~NodeContextMenu() = default;
-
-    virtual void Draw() noexcept override;
-
-  private:
-    void DrawPopupCategory(const std::string& category, const flow::CategoryMap& registered_nodes);
-
-  public:
-    Event<const std::string&, const std::string&> OnSelection;
-
-  private:
-    std::shared_ptr<NodeFactory> _factory;
-    std::string node_lookup;
-    bool is_focused = false;
-};
 
 /**
  * @brief Graph editor window for creating flows.
@@ -229,7 +209,7 @@ class GraphWindow : public Window
     std::shared_ptr<PortView> _new_node_link_pin = nullptr;
     std::shared_ptr<PortView> _new_link_pin      = nullptr;
 
-    NodeContextMenu _node_creation_context_menu;
+    NodeExplorerWindow _node_creation_menu;
 
     struct
     {

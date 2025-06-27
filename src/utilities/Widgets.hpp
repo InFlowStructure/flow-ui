@@ -5,6 +5,7 @@
 
 #include "Core.hpp"
 #include "FileExplorer.hpp"
+#include "InputField.hpp"
 #include "Style.hpp"
 
 #include <flow/core/Concepts.hpp>
@@ -52,9 +53,6 @@ static inline bool InputChrono(std::string_view name, D& value, ImGuiInputTextFl
 
     return ImGui::IsItemDeactivatedAfterEdit();
 }
-
-template<typename T>
-static inline bool InputField(std::string_view name, T& value, ImGuiInputTextFlags flags);
 
 template<>
 inline bool InputField<bool>(std::string_view name, bool& value, ImGuiInputTextFlags)

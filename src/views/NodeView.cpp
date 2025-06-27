@@ -7,8 +7,8 @@
 #include "ConnectionView.hpp"
 #include "PortView.hpp"
 #include "ViewFactory.hpp"
-#include "utilities/Builders.hpp"
 #include "utilities/Conversions.hpp"
+#include "utilities/NodeBuilder.hpp"
 #include "utilities/Widgets.hpp"
 #include "widgets/Text.hpp"
 
@@ -100,8 +100,6 @@ catch (const std::exception& e)
 void NodeView::Draw()
 try
 {
-    const auto& name = Name.c_str();
-
     if (_received_error)
     {
         ed::PushStyleColor(ed::StyleColor_NodeBorder, ImColor(227, 36, 27));
@@ -109,29 +107,16 @@ try
 
     _builder->Begin(_id);
 
-    _builder->Header(utility::to_ImColor(HeaderColour));
-    ImGui::Spring(0);
-
-    widgets::Text(name).SetFont(GetConfig().NodeHeaderFont).Draw();
-
-    ImGui::Spring(1);
-    ImGui::Dummy(ImVec2(0, 28));
-    ImGui::Spring(0);
-    _builder->EndHeader();
+    DrawHeader();
 
     try
     {
         ImGui::PushStyleColor(ImGuiCol_FrameBg,
                               ImGui::GetStyleColorVec4(ImGuiCol_FrameBg) - ImVec4(0.f, 0.f, 0.f, 25.f));
-        for (auto& input : Inputs)
-        {
-            input->Draw(_builder);
-        }
 
-        for (auto& output : Outputs)
-        {
-            output->Draw(_builder);
-        }
+        DrawInputs();
+        DrawOutputs();
+
         ImGui::PopStyleColor();
     }
     catch (const std::exception& e)
@@ -161,6 +146,35 @@ void NodeView::ShowConnectables(const std::shared_ptr<PortView>& new_link_pin)
     for (auto& port : Outputs)
     {
         port->ShowConnectable(new_link_pin);
+    }
+}
+
+void NodeView::DrawHeader()
+{
+    _builder->Header(utility::to_ImColor(HeaderColour));
+    ImGui::Spring(0);
+
+    widgets::Text(Name).SetFont(GetConfig().NodeHeaderFont).Draw();
+
+    ImGui::Spring(1);
+    ImGui::Dummy(ImVec2(0, 28));
+    ImGui::Spring(0);
+    _builder->EndHeader();
+}
+
+void NodeView::DrawInputs()
+{
+    for (auto& input : Inputs)
+    {
+        input->Draw(_builder);
+    }
+}
+
+void NodeView::DrawOutputs()
+{
+    for (auto& output : Outputs)
+    {
+        output->Draw(_builder);
     }
 }
 

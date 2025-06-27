@@ -91,14 +91,22 @@ void NodeExplorerWindow::DrawPopupCategory(const std::string& category, const fl
     auto [begin_it, end_it] = registered_nodes.equal_range(category);
     for (auto it = begin_it; it != end_it; ++it)
     {
+        const auto class_name   = it->second;
         const auto display_name = _env->GetFactory()->GetFriendlyName(it->second);
 
         ImGui::Bullet();
-        ImGui::Selectable(display_name.c_str());
+        if (ImGui::Selectable(display_name.c_str()))
+        {
+            if (OnSelection != nullptr)
+            {
+                OnSelection(class_name, display_name);
+                ImGui::TreePop();
+                return;
+            }
+        }
 
         if (ImGui::BeginDragDropSource())
         {
-            const auto class_name = it->second;
             ImGui::Text("+ Create Node");
             ImGui::SetDragDropPayload("NewNode", class_name.c_str(), class_name.size() + 1, ImGuiCond_Once);
             ImGui::EndDragDropSource();

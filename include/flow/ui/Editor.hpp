@@ -3,8 +3,8 @@
 
 #pragma once
 
+#include "CommandManager.hpp"
 #include "Config.hpp"
-#include "InputManager.hpp"
 #include "ViewFactory.hpp"
 #include "Window.hpp"
 #include "WindowManager.hpp"
@@ -37,19 +37,6 @@ class Editor
      * @brief The main running method which renders the editor and all related windows.
      */
     void Run();
-
-    /**
-     * @brief Adds a new dockspace that windows can be docked to.
-     *
-     * @param name The name of the dockspace.
-     * @param initial_dockspace_name The dockspace to split off from.
-     * @param ratio How much of the original dockspace should be split off for the new dockspace.
-     * @param direction The direction for the new split.
-     *
-     * @note Should be called before adding windows.
-     */
-    void AddDockspace(std::string name, std::string initial_dockspace_name, float ratio,
-                      DockspaceSplitDirection direction);
 
     /**
      * @brief Get a reference to the shared environment.
@@ -91,7 +78,7 @@ class Editor
     std::shared_ptr<ViewFactory> _factory = std::make_shared<ViewFactory>();
     std::shared_ptr<Env> _env             = Env::Create(_factory);
     std::unique_ptr<WindowManager> _window_manager;
-    std::unique_ptr<InputManager> _input_manager;
+    std::unique_ptr<CommandManager> _input_manager;
 };
 
 FLOW_UI_NAMESPACE_END

@@ -30,109 +30,6 @@ FLOW_UI_NAMESPACE_BEGIN
 using namespace ax;
 namespace ed = ax::NodeEditor;
 
-void NodeContextMenu::Draw() noexcept
-{
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(5, 5));
-    ImGui::PushStyleColor(ImGuiCol_PopupBg, IM_COL32(15, 15, 15, 240));
-
-    ImGui::SetNextWindowSizeConstraints(ImVec2(300, 300), ImVec2(315, 400));
-    if (!ImGui::BeginPopup("Create New Node", ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking))
-    {
-        is_focused  = false;
-        node_lookup = "";
-        ImGui::PopStyleColor();
-        ImGui::PopStyleVar();
-        return;
-    }
-
-    if (node_lookup.empty() && !is_focused)
-    {
-        ImGui::SetKeyboardFocusHere(0);
-        is_focused = true;
-    }
-
-    ImGui::BeginHorizontal("search");
-
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 20.f);
-    ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(36, 36, 36, 255));
-
-    ImGui::SetNextItemAllowOverlap();
-    ImGui::InputText("##Search", &node_lookup, 0);
-
-    ImGui::PopStyleColor();
-    ImGui::PopStyleVar();
-
-    ImGui::SetCursorPosX((ImGui::GetItemRectMax() - ImGui::GetItemRectMin()).x - 18);
-
-    ImGui::PushFont(std::bit_cast<ImFont*>(GetConfig().IconFont.get()));
-    ImGui::TextUnformatted(ICON_FA_MAGNIFYING_GLASS);
-    ImGui::PopFont();
-
-    ImGui::EndHorizontal();
-
-    auto registered_nodes = _factory->GetCategories();
-
-    if (!node_lookup.empty())
-    {
-        auto partial_match_func = [&](const auto& entry) -> bool {
-            auto [_, class_name]     = entry;
-            std::string display_name = _factory->GetFriendlyName(class_name);
-            std::string filter       = node_lookup;
-
-            const auto& to_lower = [](unsigned char c) { return static_cast<unsigned char>(std::tolower(c)); };
-            std::transform(filter.begin(), filter.end(), filter.begin(), to_lower);
-            std::transform(class_name.begin(), class_name.end(), class_name.begin(), to_lower);
-            std::transform(display_name.begin(), display_name.end(), display_name.begin(), to_lower);
-
-            return std::string_view(display_name).find(filter) == std::string_view::npos &&
-                   std::string_view(class_name).find(filter) == std::string_view::npos;
-        };
-
-        std::erase_if(registered_nodes, partial_match_func);
-    }
-
-    if (ImGui::BeginChild("Categories"))
-    {
-        std::set<std::string> categories;
-        for (const auto& [category, _] : registered_nodes)
-        {
-            categories.insert(category);
-        }
-
-        for (const auto& category : categories)
-        {
-            DrawPopupCategory(category, registered_nodes);
-        }
-
-        ImGui::EndChild();
-    }
-
-    ImGui::EndPopup();
-
-    ImGui::PopStyleColor();
-    ImGui::PopStyleVar();
-}
-
-void NodeContextMenu::DrawPopupCategory(const std::string& category, const flow::CategoryMap& registered_nodes)
-{
-    if (!ImGui::TreeNodeEx(category.c_str(), node_lookup.empty() ? 0 : ImGuiTreeNodeFlags_DefaultOpen)) return;
-
-    auto [begin_it, end_it] = registered_nodes.equal_range(category);
-    for (auto it = begin_it; it != end_it; ++it)
-    {
-        auto class_name   = it->second;
-        auto display_name = _factory->GetFriendlyName(class_name);
-
-        ImGui::Bullet();
-        if (ImGui::MenuItem(display_name.c_str()))
-        {
-            OnSelection(class_name, display_name);
-            break;
-        }
-    }
-    ImGui::TreePop();
-}
-
 namespace
 {
 inline void DrawLabel(const char* label, ImColor color)
@@ -206,12 +103,13 @@ constexpr GraphWindow::ActionType operator&(const GraphWindow::ActionType& a, co
 }
 
 GraphWindow::GraphWindow(std::shared_ptr<flow::Graph> graph)
-    : Window(graph->GetName()), _graph{std::move(graph)}, _node_creation_context_menu{GetEnv()->GetFactory()}
+    : Window(graph->GetName()), _graph{std::move(graph)}, _node_creation_menu{GetEnv()}
 {
     Configure();
     SetStyle();
 
-    _node_creation_context_menu.OnSelection = [this](const auto& class_name, const auto& display_name) {
+    _node_creation_menu.SetActiveGraph(_graph);
+    _node_creation_menu.OnSelection = [this](const auto& class_name, const auto& display_name) {
         CreateNode(class_name, display_name);
         ImGui::CloseCurrentPopup();
     };
@@ -439,7 +337,13 @@ try
         ImGui::EndPopup();
     }
 
-    _node_creation_context_menu.Draw();
+    if (ImGui::BeginPopup("Create New Node", ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking))
+    {
+        ImGui::SetNextWindowSizeConstraints(ImVec2(300, 300), ImVec2(315, 400));
+
+        _node_creation_menu.Draw();
+        ImGui::EndPopup();
+    }
 
     ImGui::PopStyleColor();
     ImGui::PopStyleVar();
@@ -571,11 +475,6 @@ void GraphWindow::EndDraw()
 
 std::shared_ptr<NodeView> GraphWindow::FindNode(std::uint64_t id) const
 {
-    if (!id)
-    {
-        throw std::invalid_argument("Node ID cannot be null");
-    }
-
     if (_item_views.contains(id))
     {
         return std::dynamic_pointer_cast<NodeView>(_item_views.at(id));
@@ -584,23 +483,10 @@ std::shared_ptr<NodeView> GraphWindow::FindNode(std::uint64_t id) const
     return nullptr;
 }
 
-ConnectionView& GraphWindow::FindConnection(std::uint64_t id)
-{
-    if (!id)
-    {
-        throw std::invalid_argument("Link ID cannot be null");
-    }
-
-    return _links.at(id);
-}
+ConnectionView& GraphWindow::FindConnection(std::uint64_t id) { return _links.at(id); }
 
 std::shared_ptr<PortView> GraphWindow::FindPort(std::uint64_t id) const
 {
-    if (!id)
-    {
-        throw std::invalid_argument("Pin ID cannot be null");
-    }
-
     for (auto& [_, item] : _item_views)
     {
         auto node = std::dynamic_pointer_cast<NodeView>(item);
@@ -631,11 +517,6 @@ std::shared_ptr<PortView> GraphWindow::FindPort(std::uint64_t id) const
 
 std::shared_ptr<CommentView> GraphWindow::FindComment(std::uint64_t id) const
 {
-    if (!id)
-    {
-        throw std::invalid_argument("Comment ID cannot be null");
-    }
-
     if (_item_views.contains(id))
     {
         return std::dynamic_pointer_cast<CommentView>(_item_views.at(id));
@@ -646,34 +527,39 @@ std::shared_ptr<CommentView> GraphWindow::FindComment(std::uint64_t id) const
 
 void GraphWindow::DeleteNode(std::uint64_t id)
 {
-    if (!_item_views.contains(id)) return;
+    if (!_item_views.contains(id))
+    {
+        return;
+    }
 
     const auto& node = std::dynamic_pointer_cast<NodeView>(_item_views.at(id));
-    if (node)
+    if (!node)
     {
-        std::vector<std::uint64_t> links_to_delete;
-        for (const auto& [link_id, link] : _links)
-        {
-            if (std::any_of(node->Inputs.begin(), node->Inputs.end(),
-                            [&, end_pin_id = link.EndPortID](const auto& in) { return in->ID == end_pin_id; }))
-            {
-                links_to_delete.push_back(link_id);
-            }
-
-            if (std::any_of(node->Outputs.begin(), node->Outputs.end(),
-                            [&, start_pin_id = link.StartPortID](const auto& out) { return out->ID == start_pin_id; }))
-            {
-                links_to_delete.push_back(link_id);
-            }
-        }
-
-        for (const auto& link_id : links_to_delete)
-        {
-            DeleteLink(link_id);
-        }
-
-        _graph->RemoveNodeByID(node->NodeID);
+        return;
     }
+
+    std::vector<std::uint64_t> links_to_delete;
+    for (const auto& [link_id, link] : _links)
+    {
+        if (std::any_of(node->Inputs.begin(), node->Inputs.end(),
+                        [&, end_pin_id = link.EndPortID](const auto& in) { return in->ID == end_pin_id; }))
+        {
+            links_to_delete.push_back(link_id);
+        }
+
+        if (std::any_of(node->Outputs.begin(), node->Outputs.end(),
+                        [&, start_pin_id = link.StartPortID](const auto& out) { return out->ID == start_pin_id; }))
+        {
+            links_to_delete.push_back(link_id);
+        }
+    }
+
+    for (const auto& link_id : links_to_delete)
+    {
+        DeleteLink(link_id);
+    }
+
+    _graph->RemoveNodeByID(node->NodeID);
 
     _item_views.erase(id);
 }
