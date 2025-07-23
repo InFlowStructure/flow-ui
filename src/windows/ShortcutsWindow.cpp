@@ -22,11 +22,13 @@ void AddShortcutText(widgets::Table& table, const std::string& name, ImGuiKeyCho
     table.AddEntry(ShorcutTextBuilder(keys));
 }
 
-auto window_shortcuts = widgets::Table("Window Shortcuts", 2);
-auto graph_shortcuts  = widgets::Table("Graph Shortcuts", 2);
+ShortcutsWindow::ShortcutsWindow() : Window("Shortcuts") {}
 
-ShortcutsWindow::ShortcutsWindow() : Window("Shortcuts")
+void ShortcutsWindow::Draw()
 {
+    auto window_shortcuts = widgets::Table("Window Shortcuts", 2);
+    auto graph_shortcuts  = widgets::Table("Graph Shortcuts", 2);
+
     AddShortcutText(window_shortcuts, "New Flow", ImGuiMod_Ctrl | ImGuiKey_N);
     AddShortcutText(window_shortcuts, "Open Flow", ImGuiMod_Ctrl | ImGuiKey_O);
     AddShortcutText(window_shortcuts, "Save Flow", ImGuiMod_Ctrl | ImGuiKey_S);
@@ -42,10 +44,7 @@ ShortcutsWindow::ShortcutsWindow() : Window("Shortcuts")
     AddShortcutText(graph_shortcuts, "Focus", ImGuiKey_F);
     AddShortcutText(graph_shortcuts, "Undo (Experimental)", ImGuiMod_Ctrl | ImGuiKey_Z, Colour(244, 129, 36));
     AddShortcutText(graph_shortcuts, "Redo (Experimental)", ImGuiMod_Ctrl | ImGuiKey_Y, Colour(244, 129, 36));
-}
 
-void ShortcutsWindow::Draw()
-{
     widgets::Text("Window Shortcuts").Draw();
     ImGui::Separator();
     window_shortcuts.Draw();

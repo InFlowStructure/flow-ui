@@ -28,8 +28,6 @@ namespace
 {
 PortIconType GetIconType(std::string_view type)
 {
-    if (type.find("vector") != std::string_view::npos) return PortIconType::Grid;
-
     if (type.find("*") != std::string_view::npos || type.find("unique_ptr") != std::string_view::npos ||
         type.find("&") != std::string_view::npos)
     {
@@ -122,7 +120,7 @@ try
 
     if (auto new_data = _input_field->GetData())
     {
-        OnSetInput(Key(), std::move(new_data));
+        OnSetInput(GetKey(), std::move(new_data));
     }
 }
 catch (const std::exception& e)

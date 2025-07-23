@@ -579,7 +579,7 @@ bool GraphWindow::DeleteLink(std::uint64_t id)
     auto start_node = FindNode(start_pin->NodeViewID);
     auto end_node   = FindNode(end_pin->NodeViewID);
 
-    _graph->DisconnectNodes(start_node->NodeID, start_pin->Key(), end_node->NodeID, end_pin->Key());
+    _graph->DisconnectNodes(start_node->NodeID, start_pin->GetKey(), end_node->NodeID, end_pin->GetKey());
 
     return _links.erase(id) != 0;
 }

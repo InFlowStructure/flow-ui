@@ -57,11 +57,15 @@ GraphItemView::~GraphItemView()
 void GraphItemView::ShowConnectables(const std::shared_ptr<PortView>&) {}
 
 NodeView::NodeView(const flow::SharedNode& node, Colour header_colour)
-try : GraphItemView(std::hash<flow::UUID>{}(node->ID())), NodeID(node->ID()), Name(node->GetName()),
-    HeaderColour(header_colour), _builder{std::make_shared<utility::NodeBuilder>()}
+try
+    : GraphItemView(std::hash<flow::UUID>{}(node->ID())), NodeID(node->ID()), Name(node->GetName()),
+      HeaderColour(header_colour), _builder{std::make_shared<utility::NodeBuilder>()}
 {
-    node->OnCompute.Bind("ClearError", [&]() { _received_error = false; });
-    node->OnError.Bind("SetError", [&](const std::exception&) { _received_error = true; });
+    node->OnCompute.Bind("ClearError", [&]() { _received_error = std::nullopt; });
+    node->OnError.Bind("SetError", [&](const std::exception& e) {
+        _received_error.emplace(e.what());
+        SPDLOG_ERROR("{}({}): {}", ID(), Name, _received_error.value());
+    });
 
     auto on_input = [this, env = node->GetEnv(), n = node](const auto& key, auto data) {
         env->AddTask([key, c = std::move(n), d = std::move(data)] {
@@ -70,11 +74,10 @@ try : GraphItemView(std::hash<flow::UUID>{}(node->ID())), NodeID(node->ID()), Na
         });
     };
 
-    std::vector<flow::SharedPort> sorted_ports;
+    std::set<flow::SharedPort> sorted_ports;
     auto ins = node->GetInputPorts();
 
-    std::for_each(ins.begin(), ins.end(), [&](const auto p) { sorted_ports.emplace_back(p.second); });
-    std::sort(sorted_ports.begin(), sorted_ports.end());
+    std::for_each(ins.begin(), ins.end(), [&](const auto p) { sorted_ports.insert(p.second); });
 
     auto view_factory = std::dynamic_pointer_cast<ViewFactory>(node->GetEnv()->GetFactory());
 

@@ -37,9 +37,7 @@ enum class PortType
 class PortView
 {
   public:
-    /**
-     * @brief Input event type for port types that have input fields registered.
-     */
+    /// Input event type for port types that have input fields registered.
     using InputEvent = Event<const flow::IndexableName&, flow::SharedNodeData>;
 
     /**
@@ -62,8 +60,8 @@ class PortView
     bool IsConnected() const noexcept { return _port->IsConnected(); }
 
     /**
-     * @brief Checks if the prt can link to the given port.
-     * @param other THe ports to check against.
+     * @brief Checks if the port can link to the given port.
+     * @param other The port to check against.
      */
     bool CanLink(const std::shared_ptr<PortView>& other) const noexcept;
 
@@ -88,13 +86,13 @@ class PortView
      * @brief Gets the unique hash key of the port.
      * @returns The IndexableName of the port.
      */
-    const flow::IndexableName& Key() const noexcept { return _port->GetKey(); }
+    const flow::IndexableName& GetKey() const noexcept { return _port->GetKey(); }
 
     /**
      * @brief Gets the caption/description of the port.
      * @returns The port's caption.
      */
-    std::string_view Caption() const noexcept { return _port->GetCaption(); }
+    std::string_view GetCaption() const noexcept { return _port->GetCaption(); }
 
     /**
      * @brief Get's the typename of the port data.
@@ -120,16 +118,20 @@ class PortView
      */
     void SetShowLabel(bool show) { _show_label = show; }
 
+    /**
+     * @brief Sets the input field widget that will be drawn for input port types.
+     * @param input_field The input field widget to use.
+     */
     void SetInputField(std::unique_ptr<widgets::InputInterface>&& input_field)
     {
         _input_field = std::move(input_field);
     }
 
-  protected:
+  private:
     void DrawInput();
 
-  private:
     void DrawLabel();
+
     void DrawIcon(float alpha);
 
   public:

@@ -110,7 +110,7 @@ class NodeView : public GraphItemView
 
   protected:
     std::shared_ptr<utility::NodeBuilder> _builder;
-    bool _received_error = false;
+    std::optional<std::string> _received_error;
 };
 
 /**
