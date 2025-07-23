@@ -11,7 +11,7 @@
 #include <memory>
 #include <string_view>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 class NodeView;
 
@@ -37,27 +37,21 @@ enum class PortType
 class PortView
 {
   public:
-    /**
-     * @brief Input event type for port types that have input fields registered.
-     */
+    /// Input event type for port types that have input fields registered.
     using InputEvent = Event<const flow::IndexableName&, flow::SharedNodeData>;
 
     /**
      * @brief Contrusts a port view for a given node.
      *
-     * @param node_id The ID of the NodeVIew this port belongs to.
+     * @param node_id The ID of the NodeView this port belongs to.
      * @param port_data The data pointer of the Port.
-     * @param factory View factory for creating ports from registered types.
-     * @param on_input Event to run on input for types that have input fields regsitered.
-     * @param show_label Show the port label or not.
      */
-    PortView(const std::uint64_t& node_id, std::shared_ptr<Port> port_data,
-             const std::shared_ptr<class ViewFactory>& factory, InputEvent on_input, bool show_label = true);
+    PortView(PortType type, const std::uint64_t& node_id, std::shared_ptr<Port> port_data);
 
     /**
      * @brief Renders the Port to NodeView.
      */
-    void Draw();
+    void Draw(const std::shared_ptr<utility::NodeBuilder>& builder);
 
     /**
      * @brief Get the connected status of the port.
@@ -66,8 +60,8 @@ class PortView
     bool IsConnected() const noexcept { return _port->IsConnected(); }
 
     /**
-     * @brief Checks if the prt can link to the given port.
-     * @param other THe ports to check against.
+     * @brief Checks if the port can link to the given port.
+     * @param other The port to check against.
      */
     bool CanLink(const std::shared_ptr<PortView>& other) const noexcept;
 
@@ -92,31 +86,25 @@ class PortView
      * @brief Gets the unique hash key of the port.
      * @returns The IndexableName of the port.
      */
-    const flow::IndexableName& Key() const noexcept { return _port->GetKey(); }
+    const flow::IndexableName& GetKey() const noexcept { return _port->GetKey(); }
 
     /**
      * @brief Gets the caption/description of the port.
      * @returns The port's caption.
      */
-    std::string_view Caption() const noexcept { return _port->GetCaption(); }
+    std::string_view GetCaption() const noexcept { return _port->GetCaption(); }
 
     /**
      * @brief Get's the typename of the port data.
      * @returns The port's data typename.
      */
-    std::string_view Type() const noexcept { return _port->GetDataType(); }
+    std::string_view GetType() const noexcept { return _port->GetDataType(); }
 
     /**
      * @brief Gets the colour of the data type.
      * @returns The data type's registered colour.
      */
-    Colour GetColour() const noexcept { return GetStyle().GetTypeColour(Type()); }
-
-    /**
-     * @brief Sets the view builder pointer.
-     * @param builder The new builder to use.
-     */
-    void SetBuilder(std::shared_ptr<utility::NodeBuilder> builder) noexcept;
+    Colour GetColour() const noexcept { return GetStyle().GetTypeColour(GetType()); }
 
     /**
      * @brief Sets whether or not the port should be shown as connectable or not.
@@ -130,11 +118,20 @@ class PortView
      */
     void SetShowLabel(bool show) { _show_label = show; }
 
-  protected:
-    void DrawInput();
+    /**
+     * @brief Sets the input field widget that will be drawn for input port types.
+     * @param input_field The input field widget to use.
+     */
+    void SetInputField(std::unique_ptr<widgets::InputInterface>&& input_field)
+    {
+        _input_field = std::move(input_field);
+    }
 
   private:
+    void DrawInput();
+
     void DrawLabel();
+
     void DrawIcon(float alpha);
 
   public:
@@ -145,7 +142,7 @@ class PortView
     const std::uint64_t& NodeViewID;
 
     /// The type of port.
-    PortType Kind = PortType::Input;
+    PortType Type = PortType::Input;
 
     /// Event run on setting a new value in the input field.
     InputEvent OnSetInput;
@@ -155,12 +152,10 @@ class PortView
 
   private:
     std::shared_ptr<Port> _port;
-    std::shared_ptr<widgets::InputInterface> _input_field;
+    std::unique_ptr<widgets::InputInterface> _input_field;
 
     bool _show_label = true;
     bool _was_active = false;
     float _alpha     = 1.f;
-
-    std::shared_ptr<utility::NodeBuilder> _builder;
 };
 FLOW_UI_NAMESPACE_END

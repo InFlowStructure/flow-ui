@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-FLOW_UI_SUBNAMESPACE_START(widgets)
+FLOW_UI_SUBNAMESPACE_BEGIN(widgets)
 
 /**
  * @brief Table widget for displaying widgets in an organised table view.
@@ -28,7 +28,7 @@ class Table : public Widget
     /**
      * @brief Renders the table to the window.
      */
-    virtual void operator()() noexcept override;
+    virtual void Draw() noexcept override;
 
     /**
      * @brief Adds widget entry to the table in the next available column.

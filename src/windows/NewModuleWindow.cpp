@@ -12,7 +12,7 @@
 
 using namespace std::string_literals;
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 std::string replace_all(std::string str, const std::string& from, const std::string& to)
 {
@@ -180,7 +180,7 @@ try
     new_module_form.AddEntry(std::make_shared<widgets::Text>("Dependencies"));
     new_module_form.AddEntry(dependencies);
 
-    new_module_form();
+    new_module_form.Draw();
 
     bool created = false;
     ImGui::BeginHorizontal("buttons");

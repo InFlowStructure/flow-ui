@@ -8,7 +8,7 @@
 #include <flow/core/Graph.hpp>
 #include <flow/core/NodeFactory.hpp>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 class NodeExplorerWindow : public Window
 {
@@ -23,15 +23,13 @@ class NodeExplorerWindow : public Window
   private:
     void DrawPopupCategory(const std::string& category, const flow::CategoryMap& registered_nodes);
 
+  public:
+    Event<const std::string&, const std::string&> OnSelection;
+
   private:
     std::shared_ptr<Env> _env;
     std::shared_ptr<Graph> _active_graph;
     std::string node_lookup;
-    struct
-    {
-        std::string class_name;
-        std::string display_name;
-    } drag_drop_payload;
 };
 
 FLOW_UI_NAMESPACE_END

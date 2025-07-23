@@ -5,8 +5,10 @@
 
 #include "Config.hpp"
 #include "EditorNodes.hpp"
+#include "FileExplorer.hpp"
 #include "ViewFactory.hpp"
 #include "Window.hpp"
+#include "WindowManager.hpp"
 #include "utilities/Conversions.hpp"
 #include "windows/ModuleManagerWindow.hpp"
 #include "windows/NodeExplorerWindow.hpp"
@@ -31,143 +33,56 @@
 #include <iomanip>
 #include <iostream>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 using namespace ax;
 namespace ed = ax::NodeEditor;
+HelloImGui::RunnerParams _params;
+
+void AddDockspace(std::string name, std::string initial_dockspace_name, float ratio, ImGuiDir direction)
+{
+    HelloImGui::DockingSplit split;
+    split.initialDock = std::move(initial_dockspace_name);
+    split.newDock     = std::move(name);
+    split.direction   = direction;
+    split.ratio       = ratio;
+
+    _params.dockingParams.dockingSplits.push_back(std::move(split));
+}
 
 const std::filesystem::path default_save_path    = FileExplorer::GetDocumentsPath() / "flows";
 const std::filesystem::path default_modules_path = FileExplorer::GetExecutablePath() / "modules";
 
-HelloImGui::RunnerParams _params;
-
 Editor::Editor(const std::string& initial_file)
+    : _window_manager(std::make_unique<WindowManager>()), _input_manager(std::make_unique<CommandManager>())
 {
-    _params.appWindowParams.windowTitle             = "Flow Editor";
-    _params.appWindowParams.borderless              = false;
-    _params.appWindowParams.restorePreviousGeometry = true;
-    _params.iniFolderType                           = HelloImGui::IniFolderType::TempFolder;
-    _params.appWindowParams.windowGeometry.size     = {1920, 1080};
-
-    _params.callbacks.PostInit = [&] {
-        GetConfig().RenderBackend = utility::to_RendererBackend(_params.rendererBackendType);
-
-        SetupStyle(GetStyle());
-        utility::to_ImGuiStyle(GetStyle());
-
-        Init(initial_file);
-    };
-    _params.callbacks.BeforeExit = [&] { Teardown(); };
-
-    _params.imGuiWindowParams.defaultImGuiWindowType = HelloImGui::DefaultImGuiWindowType::ProvideFullScreenDockSpace;
-    _params.imGuiWindowParams.enableViewports        = true;
-    _params.imGuiWindowParams.showMenuBar            = true;
-    _params.imGuiWindowParams.showMenu_App           = true;
-    _params.imGuiWindowParams.showMenu_View          = false;
-
-    _params.dpiAwareParams.fontRenderingScale  = 1.f;
-    _params.dpiAwareParams.dpiWindowSizeFactor = 1.f;
-
-    _params.dockingParams.mainDockSpaceNodeFlags = ImGuiDockNodeFlags_AutoHideTabBar;
-
-    _params.callbacks.PreNewFrame = [=, this] {
-        HandleInput();
-
-        OnGraphWindowAdded.Broadcast();
-        OnGraphWindowAdded.UnbindAll();
-
-        OnGraphWindowRemoved.Broadcast();
-        OnGraphWindowRemoved.UnbindAll();
-    };
-
-    _params.imGuiWindowParams.showMenu_View_Themes = false;
-    _params.fpsIdling.enableIdling                 = false;
-
-    _params.callbacks.SetupImGuiStyle = [&] {
-        SetupStyle(GetStyle());
-        utility::to_ImGuiStyle(GetStyle());
-
-        auto& imgui_style                      = ImGui::GetStyle();
-        imgui_style.CircleTessellationMaxError = 0.1f;
-        imgui_style.CurveTessellationTol       = 0.1f;
-    };
-    _params.callbacks.LoadAdditionalFonts = [&] {
-        auto& config = GetConfig();
-        LoadFonts(config);
-        ImGui::GetIO().FontDefault = std::bit_cast<ImFont*>(config.DefaultFont.get());
-    };
-    _params.callbacks.ShowMenus = [&] {
-        DrawMainMenuBar();
-        HelloImGui::ShowViewMenu(_params);
-    };
+    SetupParams(initial_file);
 }
 
 void Editor::Init(const std::string& initial_file)
 {
-    _factory->OnNodeClassUnregistered.Bind("Unregister", [&](std::string_view class_name) {
-        for (const auto& [_, gw] : _graph_windows)
-        {
-            const auto& graph = gw->GetGraph();
+    RegisterInputs();
+    RegisterNodes();
+    RegisterInputFieldTypes();
 
-            std::set<flow::UUID> nodes_to_remove;
-            graph->Visit([&](const auto& node) {
-                if (node->GetClass() == class_name)
-                {
-                    nodes_to_remove.insert(node->ID());
-                }
-            });
+    AddDockspace(PropertyDockspace, DefaultDockspace, 0.25f, ImGuiDir_Left);
+    AddDockspace("PropertySubSpace", PropertyDockspace, 0.5f, ImGuiDir_Down);
+    AddDockspace("ToolbarSpace", DefaultDockspace, 0.1f, ImGuiDir_Up);
+    AddDockspace("MiscSpace", DefaultDockspace, 0.25f, ImGuiDir_Down);
 
-            for (const auto& id : nodes_to_remove)
-            {
-                graph->RemoveNodeByID(id);
-                ed::SetCurrentEditor(std::bit_cast<ed::EditorContext*>(gw->GetEditorContext().get()));
-                ed::DeleteNode(std::hash<UUID>{}(id));
-            }
-        }
-    });
+    auto node_explorer = std::make_shared<NodeExplorerWindow>(GetEnv());
+    _window_manager->OnActiveGraphChanged.Bind(flow::IndexableName{node_explorer->GetName()},
+                                               [window = node_explorer](const auto& g) { window->SetActiveGraph(g); });
 
-    _factory->RegisterNodeClass<PreviewNode>("Editor", "Preview");
-    _factory->RegisterNodeView<PreviewNodeView, PreviewNode>();
+    auto property_window = std::make_shared<PropertyWindow>();
+    _window_manager->OnActiveGraphChanged.Bind(flow::IndexableName{property_window->GetName()},
+                                               [=](const auto& g) { property_window->SetCurrentGraph(g); });
 
-    _factory->RegisterInputType<bool>(false);
-    _factory->RegisterInputType<float>(0.f);
-    _factory->RegisterInputType<double>(0.0);
-    _factory->RegisterInputType<std::int8_t>(0);
-    _factory->RegisterInputType<std::int16_t>(0);
-    _factory->RegisterInputType<std::int32_t>(0);
-    _factory->RegisterInputType<std::int64_t>(0);
-    _factory->RegisterInputType<std::uint8_t>(0);
-    _factory->RegisterInputType<std::uint16_t>(0);
-    _factory->RegisterInputType<std::uint32_t>(0);
-    _factory->RegisterInputType<std::uint64_t>(0);
-    _factory->RegisterInputType<std::string>("");
-    _factory->RegisterInputType<std::chrono::nanoseconds>(std::chrono::nanoseconds::zero());
-    _factory->RegisterInputType<std::chrono::microseconds>(std::chrono::microseconds::zero());
-    _factory->RegisterInputType<std::chrono::milliseconds>(std::chrono::milliseconds::zero());
-    _factory->RegisterInputType<std::chrono::seconds>(std::chrono::seconds::zero());
-    _factory->RegisterInputType<std::chrono::minutes>(std::chrono::minutes::zero());
-    _factory->RegisterInputType<std::chrono::hours>(std::chrono::hours::zero());
-    _factory->RegisterInputType<std::chrono::days>(std::chrono::days::zero());
-    _factory->RegisterInputType<std::chrono::months>(std::chrono::months::zero());
-    _factory->RegisterInputType<std::chrono::years>(std::chrono::years::zero());
-    _factory->RegisterInputType<std::filesystem::path>(std::filesystem::path(""));
-
-    auto node_explorer = std::make_shared<NodeExplorerWindow>(_env);
-    OnActiveGraphChanged.Bind("NodeExplorer", [window = node_explorer](const auto& g) { window->SetActiveGraph(g); });
-
-    AddDockspace(PropertyDockspace, DefaultDockspace, 0.25f, DockspaceSplitDirection::Left);
-    AddDockspace("PropertySubSpace", PropertyDockspace, 0.5f, DockspaceSplitDirection::Down);
-    AddDockspace("ToolbarSpace", DefaultDockspace, 0.1f, DockspaceSplitDirection::Up);
-    AddDockspace("MiscSpace", DefaultDockspace, 0.25f, DockspaceSplitDirection::Down);
-
-    auto property_window = std::make_shared<PropertyWindow>(_env);
-    OnActiveGraphChanged.Bind(flow::IndexableName{property_window->GetName()},
-                              [=](const auto& g) { property_window->SetCurrentGraph(g); });
-
-    AddWindow(std::move(property_window), PropertyDockspace);
-    AddWindow(std::move(node_explorer), "PropertySubSpace");
-    AddWindow(std::make_shared<ModuleManagerWindow>(_env, default_modules_path), "PropertySubSpace", false);
-    AddWindow(std::make_shared<ShortcutsWindow>(), PropertyDockspace, false);
+    _window_manager->AddWindow(std::move(property_window), PropertyDockspace);
+    _window_manager->AddWindow(std::move(node_explorer), "PropertySubSpace");
+    _window_manager->AddWindow(std::make_shared<ModuleManagerWindow>(GetEnv(), default_modules_path),
+                               "PropertySubSpace", false);
+    _window_manager->AddWindow(std::make_shared<ShortcutsWindow>(), PropertyDockspace, false);
 
     if (!initial_file.empty())
     {
@@ -175,119 +90,127 @@ void Editor::Init(const std::string& initial_file)
     }
     else
     {
-        CreateFlow("untitled##0");
+        CreateFlow();
     }
 }
 
-void Editor::Teardown()
+void Editor::Teardown() { _window_manager->Teardown(); }
+
+void Editor::SetupParams(const std::string& initial_file)
 {
-    for (auto& window : _windows)
-    {
-        window->Teardown();
-    }
-}
+#pragma region AppWindowParams
+    _params.appWindowParams.windowTitle             = "Flow Editor";
+    _params.appWindowParams.borderless              = false;
+    _params.appWindowParams.restorePreviousGeometry = true;
+    _params.appWindowParams.windowGeometry.size     = {1920, 1080};
+#pragma endregion
 
-void Editor::Run() { HelloImGui::Run(_params); }
+#pragma region ImGuiWindowParams
+    _params.imGuiWindowParams.defaultImGuiWindowType = HelloImGui::DefaultImGuiWindowType::ProvideFullScreenDockSpace;
+    _params.imGuiWindowParams.enableViewports        = true;
+    _params.imGuiWindowParams.showMenuBar            = true;
+    _params.imGuiWindowParams.showMenu_App           = true;
+    _params.imGuiWindowParams.showMenu_View          = false;
+    _params.imGuiWindowParams.showMenu_View_Themes   = false;
+#pragma endregion
 
-void Editor::AddWindow(std::shared_ptr<Window> new_window, const std::string& dockspace, bool show)
-{
-    auto& window = _windows.emplace_back(std::move(new_window));
+#pragma region MiscellaneousParams
+    _params.dpiAwareParams.fontRenderingScale  = 1.f;
+    _params.dpiAwareParams.dpiWindowSizeFactor = 1.f;
 
-    HelloImGui::DockableWindow dockable_window;
-    dockable_window.label            = window->GetName();
-    dockable_window.dockSpaceName    = dockspace;
-    dockable_window.GuiFunction      = [=] { window->Draw(); };
-    dockable_window.imGuiWindowFlags = ImGuiWindowFlags_NoCollapse;
-    dockable_window.isVisible        = show;
+    _params.iniFolderType = HelloImGui::IniFolderType::TempFolder;
 
-    window->Init();
-    HelloImGui::AddDockableWindow(std::move(dockable_window));
-}
+    _params.dockingParams.mainDockSpaceNodeFlags = ImGuiDockNodeFlags_AutoHideTabBar;
 
-void Editor::AddDockspace(std::string name, std::string initial_dockspace_name, float ratio,
-                          DockspaceSplitDirection direction)
-{
-    HelloImGui::DockingSplit split;
-    split.initialDock = std::move(initial_dockspace_name);
-    split.newDock     = std::move(name);
-    split.direction   = utility::to_ImGuiDir(direction);
-    split.ratio       = ratio;
+    _params.fpsIdling.enableIdling = false;
+#pragma endregion
 
-    _params.dockingParams.dockingSplits.push_back(std::move(split));
-}
+#pragma region Callbacks
+    _params.callbacks.PostInit = [&] { Init(initial_file); };
 
-void* Editor::GetContext() const noexcept { return reinterpret_cast<void*>(ImGui::GetCurrentContext()); }
+    _params.callbacks.BeforeExit = [&] { Teardown(); };
 
-void Editor::HandleInput()
-{
-    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_N))
-    {
-        CreateFlow("untitled##" + std::to_string(_graph_windows.size()));
-    }
-    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_O))
-    {
-        LoadFlow();
-    }
-    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_S) ||
-        ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiMod_Alt | ImGuiKey_S))
-    {
-        SaveFlow();
-    }
-    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_W))
-    {
-        for (auto it = _graph_windows.begin(); it != _graph_windows.end();)
+    _params.callbacks.PreNewFrame = [=, this] {
+        _input_manager->Handle();
+        _window_manager->CleanupDeadWindows();
+    };
+
+    _params.callbacks.SetupImGuiStyle = [&] {
+        auto& style = ImGui::GetStyle();
+
+        style.WindowBorderSize           = 5.f;
+        style.FrameBorderSize            = 2.f;
+        style.TabRounding                = 8.f;
+        style.TabBarBorderSize           = 0.f;
+        style.CellPadding                = ImVec2{7.f, 7.f};
+        style.CircleTessellationMaxError = 0.1f;
+        style.CurveTessellationTol       = 0.1f;
+
+        auto& imgui_colours = style.Colors;
+
+        imgui_colours[ImGuiCol_WindowBg]          = ImColor(21, 21, 21);
+        imgui_colours[ImGuiCol_PopupBg]           = ImColor(15, 15, 15, 175);
+        imgui_colours[ImGuiCol_Border]            = ImColor(15, 15, 15);
+        imgui_colours[ImGuiCol_PopupBg]           = imgui_colours[ImGuiCol_WindowBg];
+        imgui_colours[ImGuiCol_FrameBg]           = ImColor(15, 15, 15);
+        imgui_colours[ImGuiCol_MenuBarBg]         = ImColor(21, 21, 21);
+        imgui_colours[ImGuiCol_TitleBg]           = ImColor(21, 21, 21);
+        imgui_colours[ImGuiCol_TitleBgActive]     = imgui_colours[ImGuiCol_TitleBg];
+        imgui_colours[ImGuiCol_Tab]               = ImColor(21, 21, 21);
+        imgui_colours[ImGuiCol_TabDimmed]         = ImColor(21, 21, 21);
+        imgui_colours[ImGuiCol_TabHovered]        = ImColor(47, 47, 47);
+        imgui_colours[ImGuiCol_TabSelected]       = ImColor(3, 98, 195);
+        imgui_colours[ImGuiCol_TabDimmedSelected] = imgui_colours[ImGuiCol_TabSelected];
+        imgui_colours[ImGuiCol_Button]            = ImColor(32, 32, 32);
+        imgui_colours[ImGuiCol_ButtonHovered]     = ImColor(3, 98, 195);
+        imgui_colours[ImGuiCol_ButtonActive]      = ImColor(13, 39, 77);
+        imgui_colours[ImGuiCol_ScrollbarBg]       = ImColor(21, 21, 21);
+        imgui_colours[ImGuiCol_ScrollbarGrab]     = ImColor(86, 86, 86);
+        imgui_colours[ImGuiCol_TableBorderLight]  = ImColor(21, 21, 21);
+        imgui_colours[ImGuiCol_TableBorderStrong] = ImColor(21, 21, 21);
+        imgui_colours[ImGuiCol_TableRowBg]        = ImColor(36, 36, 36);
+        imgui_colours[ImGuiCol_TableRowBgAlt]     = ImColor(36, 36, 36);
+        imgui_colours[ImGuiCol_Header]            = ImColor(47, 47, 47);
+        imgui_colours[ImGuiCol_HeaderHovered]     = ImColor(50, 50, 50);
+        imgui_colours[ImGuiCol_CheckMark]         = ImColor(3, 98, 195);
+    };
+
+    _params.callbacks.LoadAdditionalFonts = [&] {
+        auto& config = GetConfig();
+
+        config.DefaultFont    = flow::ui::LoadFont("fonts/DroidSans.ttf", 18.f);
+        config.NodeHeaderFont = flow::ui::LoadFont("fonts/DroidSans.ttf", 20.f);
+        config.IconFont       = flow::ui::LoadFont("fonts/fontawesome-webfont.ttf", 18.f);
+
+        ImGui::GetIO().FontDefault = std::bit_cast<ImFont*>(config.DefaultFont.get());
+    };
+
+    _params.callbacks.ShowMenus = [&] {
+        if (ImGui::BeginMenu("File"))
         {
-            if (it->second->IsOpen() && it->second->IsActive())
+            if (ImGui::MenuItem("New Flow"))
             {
-                OnGraphWindowRemoved.Bind(IndexableName{it->second->GetName()},
-                                          [name = it->second->GetName()] { HelloImGui::RemoveDockableWindow(name); });
-                it = _graph_windows.erase(it);
-                break;
+                CreateFlow("untitled##" + std::to_string(_window_manager->GetGraphWindows().size()));
             }
-            ++it;
-            OnActiveGraphChanged.Broadcast(it->second->GetGraph());
-        }
-    }
 
-    for (auto it = _graph_windows.begin(); it != _graph_windows.end();)
-    {
-        if (it->second->IsOpen())
+            if (ImGui::MenuItem("Load Flow"))
+            {
+                LoadFlow();
+            }
+
+            if (ImGui::MenuItem("Save"))
+            {
+                SaveFlow();
+            }
+
+            ImGui::EndMenu();
+        }
+
+        if (!ed::GetCurrentEditor())
         {
-            ++it;
-        }
-        else
-        {
-            OnGraphWindowRemoved.Bind(IndexableName{it->second->GetName()},
-                                      [name = it->second->GetName()] { HelloImGui::RemoveDockableWindow(name); });
-            it = _graph_windows.erase(it);
-        }
-    }
-}
-
-void Editor::DrawMainMenuBar()
-{
-    if (ImGui::BeginMenu("File"))
-    {
-        if (ImGui::MenuItem("New Flow"))
-        {
-            CreateFlow("untitled##" + std::to_string(_graph_windows.size()));
+            return;
         }
 
-        if (ImGui::MenuItem("Load Flow"))
-        {
-            LoadFlow();
-        }
-
-        if (ImGui::MenuItem("Save"))
-        {
-            SaveFlow();
-        }
-
-        ImGui::EndMenu();
-    }
-
-    if (ed::GetCurrentEditor())
-    {
         if (ImGui::BeginMenu("Graph"))
         {
             if (ImGui::MenuItem("Zoom to Content"))
@@ -297,37 +220,73 @@ void Editor::DrawMainMenuBar()
 
             ImGui::EndMenu();
         }
-    }
+
+        HelloImGui::ShowViewMenu(_params);
+    };
+#pragma endregion
 }
 
-std::shared_ptr<GraphWindow>& Editor::CreateFlow(std::string name)
+void Editor::RegisterInputs()
 {
-    auto found = std::find_if(_graph_windows.begin(), _graph_windows.end(),
-                              [&](const auto& entry) { return entry.second->GetName() == name; });
-    if (found != _graph_windows.end()) return found->second;
+    // New Graph (Ctrl + N)
+    _input_manager->AddCommand(ImGuiMod_Ctrl | ImGuiKey_N, [&] { CreateFlow(); });
 
-    auto graph           = std::make_shared<flow::Graph>(name, _env);
-    auto [graph_view, _] = _graph_windows.emplace(graph->ID(), std::make_shared<GraphWindow>(graph));
-    OnGraphWindowAdded.Bind(IndexableName{name}, [=, this, graph_view = graph_view->second] {
-        HelloImGui::DockableWindow graph_window;
-        graph_window.label         = name;
-        graph_window.dockSpaceName = DefaultDockspace;
-        graph_window.GuiFunction   = [this, gv = std::move(graph_view)]() {
-            if (gv->IsActive())
-            {
-                OnActiveGraphChanged.Broadcast(gv->GetGraph());
-            }
-            gv->Draw();
-        };
-        graph_window.includeInViewMenu      = false;
-        graph_window.callBeginEnd           = false;
-        graph_window.focusWindowAtNextFrame = true;
-        graph_window.imGuiWindowFlags       = ImGuiWindowFlags_NoCollapse;
+    // Open Flow file (Ctrl + O)
+    _input_manager->AddCommand(ImGuiMod_Ctrl | ImGuiKey_O, [&] { LoadFlow(); });
 
-        HelloImGui::AddDockableWindow(std::move(graph_window));
-    });
+    // Save current flow file (Ctrl + S)
+    _input_manager->AddCommand(ImGuiMod_Ctrl | ImGuiKey_S, [&] { SaveFlow(); });
 
-    return graph_view->second;
+    // Save current flow file as (Ctrl + Alt + S)
+    _input_manager->AddCommand(ImGuiMod_Ctrl | ImGuiMod_Alt | ImGuiKey_S, [&] { SaveFlow(); });
+
+    // Close current active graph window (Ctrl + W)
+    _input_manager->AddCommand(ImGuiMod_Ctrl | ImGuiKey_W, [&] { _window_manager->CloseActiveGraphWindow(); });
+}
+
+void Editor::RegisterNodes()
+{
+    GetFactory()->OnNodeClassUnregistered.Bind(
+        "Unregister", [&](std::string_view class_name) { _window_manager->RemoveUnloadedModuleNode(class_name); });
+
+    GetFactory()->RegisterNodeClass<PreviewNode>("Editor", "Preview");
+    GetFactory()->RegisterNodeView<PreviewNodeView, PreviewNode>();
+
+    GetFactory()->RegisterFunction<double(double, double), std::fmod>("Math", "fmod (double)");
+    GetFactory()->RegisterFunction<float(float, float), std::fmod>("Math", "fmod (float)");
+}
+
+void Editor::RegisterInputFieldTypes()
+{
+    GetFactory()->RegisterInputType<bool>(false);
+    GetFactory()->RegisterInputType<float>(0.f);
+    GetFactory()->RegisterInputType<double>(0.0);
+    GetFactory()->RegisterInputType<std::int8_t>(0);
+    GetFactory()->RegisterInputType<std::int16_t>(0);
+    GetFactory()->RegisterInputType<std::int32_t>(0);
+    GetFactory()->RegisterInputType<std::int64_t>(0);
+    GetFactory()->RegisterInputType<std::uint8_t>(0);
+    GetFactory()->RegisterInputType<std::uint16_t>(0);
+    GetFactory()->RegisterInputType<std::uint32_t>(0);
+    GetFactory()->RegisterInputType<std::uint64_t>(0);
+    GetFactory()->RegisterInputType<std::string>("");
+    GetFactory()->RegisterInputType<std::chrono::nanoseconds>(std::chrono::nanoseconds::zero());
+    GetFactory()->RegisterInputType<std::chrono::microseconds>(std::chrono::microseconds::zero());
+    GetFactory()->RegisterInputType<std::chrono::milliseconds>(std::chrono::milliseconds::zero());
+    GetFactory()->RegisterInputType<std::chrono::seconds>(std::chrono::seconds::zero());
+    GetFactory()->RegisterInputType<std::chrono::minutes>(std::chrono::minutes::zero());
+    GetFactory()->RegisterInputType<std::chrono::hours>(std::chrono::hours::zero());
+    GetFactory()->RegisterInputType<std::chrono::days>(std::chrono::days::zero());
+    GetFactory()->RegisterInputType<std::chrono::months>(std::chrono::months::zero());
+    GetFactory()->RegisterInputType<std::chrono::years>(std::chrono::years::zero());
+    GetFactory()->RegisterInputType<std::filesystem::path>(std::filesystem::path(""));
+}
+
+void Editor::Run() { HelloImGui::Run(_params); }
+
+const std::shared_ptr<GraphWindow>& Editor::CreateFlow(const std::string& name)
+{
+    return _window_manager->CreateGraphWindow(name, GetEnv());
 }
 
 void Editor::LoadFlow(const std::filesystem::path& filename)
@@ -362,13 +321,8 @@ void Editor::LoadFlow(const std::filesystem::path& filename)
 
 void Editor::SaveFlow()
 {
-    auto graph_window_it = std::find_if(_graph_windows.begin(), _graph_windows.end(), [](auto& gw) {
-        return ed::GetCurrentEditor() == std::bit_cast<ed::EditorContext*>(gw.second->GetEditorContext().get());
-    });
-    if (graph_window_it == _graph_windows.end()) return;
-
-    auto& graph      = graph_window_it->second->GetGraph();
-    auto& graph_view = graph_window_it->second;
+    auto graph_view = _window_manager->GetActiveGraphWindow();
+    auto& graph     = graph_view->GetGraph();
 
     std::string name{graph->GetName()};
     if (name.find("##") != std::string::npos)

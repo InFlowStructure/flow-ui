@@ -8,7 +8,7 @@
 #include <bit>
 #include <cstdint>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 static Config config{};
 

@@ -7,7 +7,7 @@
 
 #include <string>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 /// Default name of the main dockspace.
 static inline const std::string DefaultDockspace  = "MainDockSpace";

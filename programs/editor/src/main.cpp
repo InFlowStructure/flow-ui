@@ -9,6 +9,8 @@
 #include <iostream>
 
 int main(int argc, char** argv)
+
+try
 {
     std::string filename;
 
@@ -51,77 +53,17 @@ int main(int argc, char** argv)
 #endif
 
     flow::ui::Editor app(filename);
-
-    app.LoadFonts = [](flow::ui::Config& config) {
-        config.DefaultFont    = flow::ui::LoadFont("fonts/DroidSans.ttf", 18.f);
-        config.NodeHeaderFont = flow::ui::LoadFont("fonts/DroidSans.ttf", 20.f);
-        config.IconFont       = flow::ui::LoadFont("fonts/fontawesome-webfont.ttf", 18.f);
-    };
-
-    app.SetupStyle = [](flow::ui::Style& style) {
-        style.WindowBorderSize = 5.f;
-        style.FrameBorderSize  = 2.f;
-        style.TabRounding      = 8.f;
-        style.TabBarBorderSize = 0.f;
-        style.CellPadding      = {.Width = 7.f, .Height = 7.f};
-
-        auto& imgui_colours = style.Colours.BaseColours;
-        using BaseColour    = flow::ui::Style::BaseColour;
-
-        imgui_colours[BaseColour::WindowBg]          = flow::ui::Colour(21, 21, 21);
-        imgui_colours[BaseColour::PopupBg]           = flow::ui::Colour(15, 15, 15, 175);
-        imgui_colours[BaseColour::Border]            = flow::ui::Colour(15, 15, 15);
-        imgui_colours[BaseColour::PopupBg]           = imgui_colours[BaseColour::WindowBg];
-        imgui_colours[BaseColour::FrameBg]           = flow::ui::Colour(15, 15, 15);
-        imgui_colours[BaseColour::MenuBarBg]         = flow::ui::Colour(21, 21, 21);
-        imgui_colours[BaseColour::TitleBg]           = flow::ui::Colour(21, 21, 21);
-        imgui_colours[BaseColour::TitleBgActive]     = imgui_colours[BaseColour::TitleBg];
-        imgui_colours[BaseColour::Tab]               = flow::ui::Colour(21, 21, 21);
-        imgui_colours[BaseColour::TabDimmed]         = flow::ui::Colour(21, 21, 21);
-        imgui_colours[BaseColour::TabHovered]        = flow::ui::Colour(47, 47, 47);
-        imgui_colours[BaseColour::TabSelected]       = flow::ui::Colour(3, 98, 195);
-        imgui_colours[BaseColour::TabDimmedSelected] = imgui_colours[BaseColour::TabSelected];
-        imgui_colours[BaseColour::Button]            = flow::ui::Colour(32, 32, 32);
-        imgui_colours[BaseColour::ButtonHovered]     = flow::ui::Colour(3, 98, 195);
-        imgui_colours[BaseColour::ButtonActive]      = flow::ui::Colour(13, 39, 77);
-        imgui_colours[BaseColour::ScrollbarBg]       = flow::ui::Colour(21, 21, 21);
-        imgui_colours[BaseColour::ScrollbarGrab]     = flow::ui::Colour(86, 86, 86);
-        imgui_colours[BaseColour::TableBorderLight]  = flow::ui::Colour(21, 21, 21);
-        imgui_colours[BaseColour::TableBorderStrong] = flow::ui::Colour(21, 21, 21);
-        imgui_colours[BaseColour::TableRowBg]        = flow::ui::Colour(36, 36, 36);
-        imgui_colours[BaseColour::TableRowBgAlt]     = flow::ui::Colour(36, 36, 36);
-        imgui_colours[BaseColour::Header]            = flow::ui::Colour(47, 47, 47);
-        imgui_colours[BaseColour::HeaderHovered]     = flow::ui::Colour(50, 50, 50);
-        imgui_colours[BaseColour::CheckMark]         = flow::ui::Colour(3, 98, 195);
-
-        auto& colours      = style.Colours.EditorColours;
-        using EditorColour = flow::ui::Style::EditorColour;
-
-        colours[EditorColour::Bg]                  = flow::ui::Colour(38, 38, 38);
-        colours[EditorColour::Grid]                = flow::ui::Colour(52, 52, 52);
-        colours[EditorColour::NodeBg]              = flow::ui::Colour(15, 17, 15, 240);
-        colours[EditorColour::NodeBorder]          = flow::ui::Colour(0, 0, 0);
-        colours[EditorColour::SelNodeBorder]       = flow::ui::Colour(255, 255, 255);
-        colours[EditorColour::Flow]                = flow::ui::Colour(32, 191, 85);
-        colours[EditorColour::FlowMarker]          = flow::ui::Colour(32, 191, 85);
-        colours[EditorColour::HighlightLinkBorder] = flow::ui::Colour(0, 188, 235);
-        colours[EditorColour::SelLinkBorder]       = flow::ui::Colour(0, 188, 235);
-    };
-
-    try
-    {
-        app.Run();
-    }
-    catch (const std::exception& e)
-    {
-        SPDLOG_CRITICAL("Exiting with error: {0}", e.what());
-        return EXIT_FAILURE;
-    }
-    catch (...)
-    {
-        SPDLOG_CRITICAL("Exiting with unknown error");
-        return EXIT_FAILURE;
-    }
+    app.Run();
 
     return EXIT_SUCCESS;
+}
+catch (const std::exception& e)
+{
+    SPDLOG_CRITICAL("Exiting with error: {0}", e.what());
+    return EXIT_FAILURE;
+}
+catch (...)
+{
+    SPDLOG_CRITICAL("Exiting with unknown error");
+    return EXIT_FAILURE;
 }

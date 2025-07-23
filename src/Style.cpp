@@ -9,7 +9,7 @@
 #include <any>
 #include <cstdint>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 using namespace ax;
 namespace ed = ax::NodeEditor;
@@ -19,7 +19,7 @@ Style::Style()
         .Default = PortIconType::Circle,
         .Ref     = PortIconType::Diamond,
     },
-    Colours{.TypeColours{
+    TypeColours{
         {TypeName_v<std::any>, Colour(120, 120, 127)},
 
         {"flow::Struct", Colour(6, 68, 154)},
@@ -40,39 +40,24 @@ Style::Style()
         {TypeName_v<double>, Colour(147, 226, 74)},
 
         {TypeName_v<std::string>, Colour(124, 21, 153)},
-    }},
-    WindowBorderSize(5.f),
-    FrameBorderSize(2.f),
-    TabRounding(8.f),
-    TabBarBorderSize(0.f),
-    CellPadding{.Width = 7.f, .Height = 7.f}
+    }
 {
-    auto ed_style    = ed::Style{};
-    auto& ed_colours = ed_style.Colors;
-
-    int i = 0;
-    std::for_each(std::begin(ed_colours), std::end(ed_colours), [&](const auto& c) {
-        Colours.EditorColours[utility::to_EditorColour(ed::StyleColor(i++))] = utility::to_Colour(c);
-    });
 }
 
 static Style style{};
 
 Style& GetStyle() { return style; }
 
-void Style::SetTypeColour(std::string_view type, const Colour& colour)
-{
-    Colours.TypeColours[type] = std::move(colour);
-}
+void Style::SetTypeColour(std::string_view type, const Colour& colour) { TypeColours[type] = std::move(colour); }
 
 Colour Style::GetTypeColour(std::string_view type) const
 {
-    if (Colours.TypeColours.contains(type))
+    if (TypeColours.contains(type))
     {
-        return Colours.TypeColours.at(type);
+        return TypeColours.at(type);
     }
 
-    for (const auto& [port_type, colour] : Colours.TypeColours)
+    for (const auto& [port_type, colour] : TypeColours)
     {
         if (type.find(port_type) != std::string_view::npos)
         {

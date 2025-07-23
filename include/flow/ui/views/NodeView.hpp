@@ -13,7 +13,7 @@
 #include <string_view>
 #include <type_traits>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 namespace utility
 {
@@ -85,6 +85,13 @@ class NodeView : public GraphItemView
      */
     void ShowConnectables(const std::shared_ptr<PortView>& port) override;
 
+  protected:
+    void DrawHeader();
+
+    void DrawInputs();
+
+    void DrawOutputs();
+
   public:
     /// The ID of the node this view is for.
     UUID NodeID;
@@ -103,7 +110,7 @@ class NodeView : public GraphItemView
 
   protected:
     std::shared_ptr<utility::NodeBuilder> _builder;
-    bool _received_error = false;
+    std::optional<std::string> _received_error;
 };
 
 /**

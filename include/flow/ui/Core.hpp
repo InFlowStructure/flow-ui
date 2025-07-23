@@ -8,13 +8,13 @@
 #include <memory>
 
 // clang-format off
-#define FLOW_UI_NAMESPACE_START namespace flow::ui {
-#define FLOW_UI_SUBNAMESPACE_START(nested) namespace flow::ui { namespace nested {
+#define FLOW_UI_NAMESPACE_BEGIN namespace flow::ui {
+#define FLOW_UI_SUBNAMESPACE_BEGIN(nested) namespace flow::ui { namespace nested {
 #define FLOW_UI_NAMESPACE_END }
 #define FLOW_UI_SUBNAMESPACE_END } }
 // clang-format on
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 class EditorContext;
 
@@ -26,7 +26,7 @@ struct std::default_delete<flow::ui::EditorContext>
     void operator()(flow::ui::EditorContext*) const {}
 };
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 /**
  * @brief Get the current context for the graph editor.

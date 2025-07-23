@@ -14,7 +14,7 @@
 #include <filesystem>
 #include <fstream>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 const std::string module_file_extension = "flowmod";
 #ifdef FLOW_WINDOWS
@@ -29,12 +29,12 @@ class ModuleView : public Widget
 {
   public:
     ModuleView(const std::filesystem::path& name, std::shared_ptr<Env> env)
-        : _binary_path(name), _enabled(name.filename().replace_extension("").string(), true)
+        : _binary_path(name), _loaded_checkbox(name.filename().replace_extension("").string(), true)
     {
         _module = std::make_shared<Module>(_binary_path, env->GetFactory());
     }
 
-    virtual void operator()() noexcept
+    virtual void Draw() noexcept
     {
         const std::string& name    = _module->GetName();
         const std::string& version = "Version: " + _module->GetVersion();
@@ -42,12 +42,12 @@ class ModuleView : public Widget
 
         ImGui::TableNextColumn();
 
-        _enabled();
+        _loaded_checkbox.Draw();
 
         ImGui::TableNextColumn();
 
         ImGui::BeginHorizontal(("module_" + name).c_str());
-        widgets::Text{name}.SetFontSize(20.f)();
+        widgets::Text{name}.SetFontSize(20.f).Draw();
 
         auto pos_x = (ImGui::GetCursorPosX() + ImGui::GetColumnWidth() -
                       ImGui::CalcTextSize(author.length() > version.length() ? author.c_str() : version.c_str()).x +
@@ -60,14 +60,14 @@ class ModuleView : public Widget
 
         ImGui::BeginVertical("version/author");
         constexpr Colour version_author_colour{150, 150, 150};
-        widgets::Text{version}.SetFontSize(20.f).SetColour(version_author_colour)();
-        widgets::Text{author}.SetFontSize(18.f).SetColour(version_author_colour)();
+        widgets::Text{version}.SetFontSize(20.f).SetColour(version_author_colour).Draw();
+        widgets::Text{author}.SetFontSize(18.f).SetColour(version_author_colour).Draw();
         ImGui::EndVertical();
         ImGui::EndHorizontal();
 
-        if (auto data = _enabled.GetData())
+        if (auto data = _loaded_checkbox.GetData())
         {
-            if (_enabled.GetValue())
+            if (_loaded_checkbox.GetValue())
             {
                 _module->Load(_binary_path);
             }
@@ -81,7 +81,7 @@ class ModuleView : public Widget
   private:
     std::filesystem::path _binary_path;
     std::shared_ptr<Module> _module;
-    widgets::Input<bool> _enabled;
+    widgets::Input<bool> _loaded_checkbox;
 };
 
 ModuleManagerWindow::ModuleManagerWindow(std::shared_ptr<Env> env, const std::filesystem::path& modules_path)
@@ -150,7 +150,7 @@ void ModuleManagerWindow::Draw()
 
     for (const auto& [_, w] : _widgets)
     {
-        (*w)();
+        w->Draw();
     }
 
     ImGui::EndTable();

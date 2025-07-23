@@ -8,7 +8,10 @@
 
 #include <flow/core/NodeData.hpp>
 
-FLOW_UI_SUBNAMESPACE_START(widgets)
+FLOW_UI_SUBNAMESPACE_BEGIN(widgets)
+
+template<typename T>
+static inline bool InputField(std::string_view name, T& value, int flags);
 
 /**
  * @brief Input field interface class.
@@ -36,18 +39,13 @@ class Input : public InputInterface
 
     virtual ~Input() = default;
 
-    virtual void operator()() noexcept override;
+    virtual void Draw() noexcept override;
 
     /**
      * @brief Gets a node data pointer of a newly entered value.
      * @returns A new node data pointer containing the newly entered value.
      */
-    virtual flow::SharedNodeData GetData() noexcept override
-    {
-        auto d = std::move(_data);
-        _data  = nullptr;
-        return d;
-    }
+    virtual flow::SharedNodeData GetData() noexcept override { return std::move(_data); }
 
     /**
      * @brief Gets the vale that is currently entered into the input field.

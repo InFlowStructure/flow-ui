@@ -3,7 +3,7 @@
 
 #include <imgui.h>
 
-FLOW_UI_SUBNAMESPACE_START(widgets)
+FLOW_UI_SUBNAMESPACE_BEGIN(widgets)
 
 PropertyTree::PropertyTree(const std::string& name, std::size_t columns) : _name(name), _columns(columns) {}
 
@@ -19,7 +19,7 @@ void PropertyTree::AddProperty(const std::string& name, const std::vector<std::s
     _properties[category_name][name] = widgets;
 }
 
-void PropertyTree::operator()() noexcept
+void PropertyTree::Draw() noexcept
 {
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.f);
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0.f);
@@ -73,7 +73,7 @@ void PropertyTree::operator()() noexcept
             }
 
             ImGui::SetCursorPos(ImGui::GetCursorPos() - ImVec2(5.f, 1.f));
-            property_table();
+            property_table.Draw();
 
             ImGui::TreePop();
             ImGui::PopStyleVar();

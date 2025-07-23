@@ -3,8 +3,8 @@
 #include "Config.hpp"
 #include "Core.hpp"
 #include "Texture.hpp"
-#include "utilities/Builders.hpp"
 #include "utilities/Conversions.hpp"
+#include "utilities/NodeBuilder.hpp"
 #include "views/NodeView.hpp"
 #include "widgets/Text.hpp"
 
@@ -16,11 +16,17 @@
 
 #include <any>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 struct PreviewNodeView : NodeView
 {
-    PreviewNodeView(flow::SharedNode node) : NodeView(node), Node(node) {}
+    PreviewNodeView(flow::SharedNode node) : NodeView(node), Node(node)
+    {
+        for (const auto& input : Inputs)
+        {
+            input->SetShowLabel(false);
+        }
+    }
 
     virtual ~PreviewNodeView() = default;
 
@@ -28,72 +34,39 @@ struct PreviewNodeView : NodeView
     {
         _builder->Begin(this->ID());
 
-        _builder->Header(utility::to_ImColor(HeaderColour));
-        ImGui::Spring(0);
-
-        if (GetConfig().NodeHeaderFont)
-        {
-            ImGui::PushFont(std::bit_cast<ImFont*>(GetConfig().NodeHeaderFont.get()));
-            ImGui::TextUnformatted(Name.c_str());
-            ImGui::PopFont();
-        }
-        else
-        {
-            ImGui::TextUnformatted(Name.c_str());
-        }
-
-        ImGui::Spring(1);
-        ImGui::Dummy(ImVec2(0, 28));
-        ImGui::Spring(0);
-
-        if (GetConfig().IconFont)
-        {
-            ImGui::PushFont(std::bit_cast<ImFont*>(GetConfig().IconFont.get()));
-        }
-
-        const bool should_copy = ImGui::Button(ICON_FA_COPY);
-
-        if (GetConfig().IconFont)
-        {
-            ImGui::PopFont();
-        }
-
-        _builder->EndHeader();
+        DrawHeader();
 
         auto input_it     = std::find_if(Inputs.begin(), Inputs.end(), [](const auto& in) { return in->Name == "in"; });
         const auto& input = *input_it;
-        input->SetShowLabel(false);
 
-        input->Draw();
+        input->Draw(_builder);
 
         _builder->Middle();
 
-        if (auto data = input->GetData())
+        auto data = input->GetData();
+        if (!data)
         {
-            const auto& factory = Node->GetEnv()->GetFactory();
-            if (auto texture_data = factory->Convert<Texture>(data))
+            _builder->End();
+            return;
+        }
+
+        const auto& factory = Node->GetEnv()->GetFactory();
+        if (auto texture_data = factory->Convert<Texture>(data))
+        {
+            Texture& texture = texture_data->Get();
+            ImGui::Image(texture.ID,
+                         ImVec2(static_cast<float>(texture.Size.Width), static_cast<float>(texture.Size.Height)));
+
+            _builder->End();
+            return;
+        }
+
+        std::string data_str = data->ToString();
+        if (!data_str.empty())
+        {
+            if (ImGui::Selectable(data_str.c_str(), false, 0, ImGui::CalcTextSize(data_str.c_str())))
             {
-                Texture& texture = texture_data->Get();
-                ImGui::Image(texture.ID,
-                             ImVec2(static_cast<float>(texture.Size.Width), static_cast<float>(texture.Size.Height)));
-
-                if (should_copy)
-                {
-                    // TODO: Copy image data not implemented
-                }
-                _builder->End();
-                return;
-            }
-
-            std::string data_str = data->ToString();
-            if (!data_str.empty())
-            {
-                if (should_copy)
-                {
-                    ImGui::SetClipboardText(data_str.c_str());
-                }
-
-                ImGui::TextUnformatted(data_str.c_str());
+                ImGui::SetClipboardText(data_str.c_str());
             }
         }
 

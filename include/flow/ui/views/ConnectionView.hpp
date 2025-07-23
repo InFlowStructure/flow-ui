@@ -10,7 +10,7 @@
 
 #include <mutex>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 /**
  * @brief Visual representation of a flow::Connection.

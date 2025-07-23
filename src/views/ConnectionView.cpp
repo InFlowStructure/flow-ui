@@ -8,7 +8,7 @@
 
 #include <stdexcept>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 namespace ed = ax::NodeEditor;
 

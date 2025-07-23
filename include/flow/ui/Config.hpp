@@ -9,7 +9,7 @@
 #include <string>
 #include <unordered_map>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 class Font;
 FLOW_UI_NAMESPACE_END
 
@@ -22,7 +22,7 @@ struct std::default_delete<flow::ui::Font>
     void operator()(flow::ui::Font*) const {}
 };
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 /**
  * @brief Flags for choosing dockspace splitting direction.

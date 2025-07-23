@@ -1,10 +1,11 @@
 #pragma once
 
+#include "flow/ui/Config.hpp"
 #include "flow/ui/Core.hpp"
 #include "flow/ui/Style.hpp"
 #include "flow/ui/Widget.hpp"
 
-FLOW_UI_SUBNAMESPACE_START(widgets)
+FLOW_UI_SUBNAMESPACE_BEGIN(widgets)
 
 /**
  * @brief Text widget to display strings in a window.
@@ -22,15 +23,19 @@ class Text : public Widget
         Right
     };
 
+    using HAlignment = HorizontalAlignment;
+
     /**
      * @brief Vertical alignment type.
      */
     enum class VerticalAlignment
     {
         Top,
-        Centre,
+        Middle,
         Bottom
     };
+
+    using VAlignment = VerticalAlignment;
 
     /**
      * @brief Alignment rules for ttext widget.
@@ -48,18 +53,15 @@ class Text : public Widget
     /**
      * @brief Constructs a text widget.
      * @param text The text to display.
-     * @param colour The colour of the displayed text.
-     * @param align The alignment of the text in the window.
      */
-    Text(const std::string& text, const Colour& colour = Colour(),
-         const Alignment& align = {HorizontalAlignment::Left, VerticalAlignment::Top});
+    Text(const std::string& text);
 
     virtual ~Text() = default;
 
     /**
      * @brief Renders the text to the window.
      */
-    virtual void operator()() noexcept override;
+    virtual void Draw() noexcept override;
 
     /**
      * @brief Sets the text colour.
@@ -75,6 +77,14 @@ class Text : public Widget
      */
     Text& SetAlignment(const Alignment& new_align) noexcept;
 
+    Text& SetAlignment(HorizontalAlignment new_halign, VerticalAlignment new_valign) noexcept;
+
+    Text& SetHorizontalAlignment(HorizontalAlignment new_halign) noexcept;
+
+    Text& SetVerticalAlignment(VerticalAlignment new_valign) noexcept;
+
+    Text& SetFont(const std::unique_ptr<Font>& font);
+
     /**
      * @brief Sets the font size of the text.
      * @param new_size The new size of the text.
@@ -84,9 +94,10 @@ class Text : public Widget
 
   private:
     std::string _text;
-    float _font_size = 18.f;
     Colour _colour;
-    Alignment _align;
+    Alignment _align = {HorizontalAlignment::Left, VerticalAlignment::Top};
+    void* _font;
+    float _font_size = 18.f;
 };
 
 FLOW_UI_SUBNAMESPACE_END

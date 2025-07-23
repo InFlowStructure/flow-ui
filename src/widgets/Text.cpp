@@ -1,17 +1,18 @@
 #include "Text.hpp"
 #include "utilities/Conversions.hpp"
 
-FLOW_UI_SUBNAMESPACE_START(widgets)
+FLOW_UI_SUBNAMESPACE_BEGIN(widgets)
 
-Text::Text(const std::string& text, const Colour& colour, const Alignment& align)
-    : _text(text), _colour(colour), _align(align)
+Text::Text(const std::string& text)
+    : _text(text), _font(reinterpret_cast<void*>(ImGui::GetFont())), _font_size(ImGui::GetFontSize())
 {
 }
 
-void Text::operator()() noexcept
+void Text::Draw() noexcept
 {
-    const auto window_size = ImGui::GetWindowSize();
-    const auto text_size   = ImGui::CalcTextSize(_text.c_str());
+    const auto original_cursor_pos = ImGui::GetCursorPos();
+    const auto region_size         = original_cursor_pos + ImGui::GetContentRegionAvail();
+    const auto text_size           = ImGui::CalcTextSize(_text.c_str());
 
     ImVec2 pos = ImGui::GetCursorPos();
     switch (_align.Horizontal)
@@ -19,10 +20,10 @@ void Text::operator()() noexcept
     case HorizontalAlignment::Left:
         break;
     case HorizontalAlignment::Centre:
-        pos.x = (window_size.x - text_size.x) * 0.5f;
+        pos.x = (region_size.x - text_size.x) * 0.5f;
         break;
     case HorizontalAlignment::Right:
-        pos.x = window_size.x - text_size.x;
+        pos.x = region_size.x - text_size.x;
         break;
     }
 
@@ -30,27 +31,37 @@ void Text::operator()() noexcept
     {
     case VerticalAlignment::Top:
         break;
-    case VerticalAlignment::Centre:
-        pos.y = (window_size.y - text_size.y) * 0.5f;
+    case VerticalAlignment::Middle:
+        pos.y = (region_size.y - text_size.y) * 0.5f;
         break;
     case VerticalAlignment::Bottom:
-        pos.y = window_size.y - (text_size.y * 2.f);
+        pos.y = region_size.y - text_size.y;
         break;
     }
+
     ImGui::SetCursorPos(pos);
 
     ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(_colour.R, _colour.G, _colour.B, _colour.A));
 
-    float old_font_size     = ImGui::GetFont()->Scale;
-    ImGui::GetFont()->Scale = _font_size / ImGui::GetFont()->FontSize;
-    ImGui::PushFont(ImGui::GetFont());
+    if (!_font)
+    {
+        _font = reinterpret_cast<void*>(ImGui::GetFont());
+    }
+
+    auto* font = reinterpret_cast<ImFont*>(_font);
+
+    float old_font_size = font->Scale;
+    font->Scale         = _font_size / font->FontSize;
+    ImGui::PushFont(font);
 
     ImGui::TextUnformatted(_text.c_str());
 
-    ImGui::GetFont()->Scale = old_font_size;
+    font->Scale = old_font_size;
     ImGui::PopFont();
 
     ImGui::PopStyleColor();
+
+    ImGui::SetCursorPos(original_cursor_pos);
 }
 
 Text& Text::SetColour(const Colour& new_colour) noexcept
@@ -62,6 +73,34 @@ Text& Text::SetColour(const Colour& new_colour) noexcept
 Text& Text::SetAlignment(const Alignment& new_align) noexcept
 {
     _align = new_align;
+    return *this;
+}
+
+Text& Text::SetAlignment(HorizontalAlignment new_halign, VerticalAlignment new_valign) noexcept
+{
+    _align = {new_halign, new_valign};
+    return *this;
+}
+
+Text& Text::SetHorizontalAlignment(HorizontalAlignment new_halign) noexcept
+{
+    _align.Horizontal = new_halign;
+    return *this;
+}
+
+Text& Text::SetVerticalAlignment(VerticalAlignment new_valign) noexcept
+{
+    _align.Vertical = new_valign;
+    return *this;
+}
+
+Text& Text::SetFont(const std::unique_ptr<Font>& font)
+{
+    if (font)
+    {
+        _font = reinterpret_cast<void*>(font.get());
+    }
+
     return *this;
 }
 

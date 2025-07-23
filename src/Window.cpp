@@ -7,15 +7,16 @@
 
 #include <imgui.h>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 Window::Window(std::string name) : _name{std::move(name)} {}
 
 void Window::Draw()
 {
-    widgets::Text("Nothing to show", Colour(175, 175, 175),
-                  widgets::Text::Alignment{widgets::Text::HorizontalAlignment::Centre,
-                                           widgets::Text::VerticalAlignment::Centre})();
+    widgets::Text("Nothing to show")
+        .SetColour(Colour(175, 175, 175))
+        .SetAlignment(widgets::Text::HorizontalAlignment::Centre, widgets::Text::VerticalAlignment::Middle)
+        .Draw();
 }
 
 FLOW_UI_NAMESPACE_END

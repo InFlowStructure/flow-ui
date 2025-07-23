@@ -14,41 +14,19 @@
 #include <string>
 #include <string_view>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 using namespace ax;
 namespace ed = ax::NodeEditor;
 
-constexpr Colour empty_property_text_colour = Colour(175, 175, 175);
-
-struct CentredText : public widgets::Text
-{
-    CentredText(const std::string& text, const Colour& c)
-        : Text(text, c, {widgets::Text::HorizontalAlignment::Centre, widgets::Text::VerticalAlignment::Centre})
-    {
-    }
-
-    virtual ~CentredText() = default;
-};
-
-PropertyWindow::PropertyWindow(std::shared_ptr<flow::Env> env) : Window(PropertyWindow::Name), _env{env} {}
-
-struct NodeProperty
-{
-    std::string Name;
-    flow::SharedNode Node;
-};
+PropertyWindow::PropertyWindow() : Window(PropertyWindow::Name) {}
 
 void PropertyWindow::Draw()
 {
-    auto env = _env.lock();
-    if (!env) return;
-
     auto graph = _graph.lock();
     if (!GetEditorContext() || !graph)
     {
-        CentredText("Nothing to show", empty_property_text_colour)();
-        return;
+        return Window::Draw();
     }
 
     ed::SetCurrentEditor(std::bit_cast<ed::EditorContext*>(GetEditorContext().get()));
@@ -58,25 +36,20 @@ void PropertyWindow::Draw()
 
     if (result == 0)
     {
-        CentredText("Select one or more nodes", empty_property_text_colour)();
+        widgets::Text("Select one or more nodes")
+            .SetColour(Colour(175, 175, 175))
+            .SetAlignment(widgets::Text::HAlignment::Centre, widgets::Text::VAlignment::Middle)
+            .Draw();
         return;
     }
 
     std::set<ed::NodeId> ids(selected_ids.begin(), std::next(selected_ids.begin(), result));
 
-    std::vector<flow::SharedNode> nodes;
-    nodes.reserve(result);
-
     graph->Visit([&](auto& node) {
         if (!ids.contains(std::hash<flow::UUID>{}(node->ID()))) return;
-        nodes.emplace_back(node);
-    });
 
-    for (auto& node : nodes)
-    {
-
-        std::string c_name = node->GetName() + "##" + std::to_string(std::hash<flow::UUID>{}(node->ID()));
-        widgets::PropertyTree properties(c_name, 2);
+        const std::string node_tree_name = node->GetName() + "##" + std::string(node->ID());
+        widgets::PropertyTree properties(node_tree_name, 2);
 
         const auto make_port_data_property = [&](const auto& port) -> std::vector<std::shared_ptr<flow::ui::Widget>> {
             return {
@@ -99,8 +72,8 @@ void PropertyWindow::Draw()
             properties.AddProperty(key_name, make_port_data_property(output), "Outputs");
         }
 
-        properties();
-    }
+        properties.Draw();
+    });
 }
 
 FLOW_UI_NAMESPACE_END

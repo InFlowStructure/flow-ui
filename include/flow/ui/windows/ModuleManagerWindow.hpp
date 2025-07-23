@@ -11,7 +11,7 @@
 #include <map>
 #include <memory>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 /**
  * @brief Windows for displaying available modules and which of them are loaded/unloaded.

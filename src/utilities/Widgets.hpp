@@ -5,6 +5,7 @@
 
 #include "Core.hpp"
 #include "FileExplorer.hpp"
+#include "InputField.hpp"
 #include "Style.hpp"
 
 #include <flow/core/Concepts.hpp>
@@ -20,7 +21,7 @@
 #include <filesystem>
 #include <stdexcept>
 
-FLOW_UI_SUBNAMESPACE_START(widgets)
+FLOW_UI_SUBNAMESPACE_BEGIN(widgets)
 
 void DrawIcon(ImDrawList* drawList, const ImVec2& a, const ImVec2& b, PortIconType type, bool filled, ImU32 color,
               ImU32 innerColor);
@@ -52,9 +53,6 @@ static inline bool InputChrono(std::string_view name, D& value, ImGuiInputTextFl
 
     return ImGui::IsItemDeactivatedAfterEdit();
 }
-
-template<typename T>
-static inline bool InputField(std::string_view name, T& value, ImGuiInputTextFlags flags);
 
 template<>
 inline bool InputField<bool>(std::string_view name, bool& value, ImGuiInputTextFlags)

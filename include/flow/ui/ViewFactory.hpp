@@ -15,7 +15,7 @@
 #include <type_traits>
 #include <unordered_map>
 
-FLOW_UI_NAMESPACE_START
+FLOW_UI_NAMESPACE_BEGIN
 
 template<class T>
 concept NodeViewType = std::is_base_of_v<NodeView, T>;
@@ -25,7 +25,9 @@ concept NodeViewType = std::is_base_of_v<NodeView, T>;
  */
 class ViewFactory : public flow::NodeFactory
 {
-    using NodeViewConstructorCallback = std::function<NodeView*(flow::SharedNode)>;
+    using NodeViewConstructorCallback_t = std::function<NodeView*(flow::SharedNode)>;
+    using InputFieldPtr_t               = std::unique_ptr<widgets::InputInterface>;
+    using InputFieldConstructor_t       = std::function<InputFieldPtr_t(std::string name, const SharedNodeData&)>;
 
   public:
     ViewFactory()          = default;
@@ -70,8 +72,8 @@ class ViewFactory : public flow::NodeFactory
     template<typename T>
     void RegisterInputType(const T& initial_value)
     {
-        _input_field_contructors[std::string{flow::TypeName_v<T>}] =
-            [=](std::string name, const SharedNodeData& data) -> std::shared_ptr<widgets::InputInterface> {
+        _input_field_constructors[std::string{flow::TypeName_v<T>}] =
+            [=](std::string name, const SharedNodeData& data) -> std::unique_ptr<widgets::InputInterface> {
             T value = initial_value;
             if (auto d = CastNodeData<T>(data))
             {
@@ -82,15 +84,20 @@ class ViewFactory : public flow::NodeFactory
                 value = ref_data->Get();
             }
 
-            return std::make_shared<widgets::Input<T>>(std::move(name), value);
+            return std::make_unique<widgets::Input<T>>(std::move(name), value);
         };
     }
 
-    /**
-     * @brief Get the list of registered input field constructors.
-     * @returns A reference to the map of registered input field constructors.
-     */
-    const auto& GetRegisteredInputTypes() { return _input_field_contructors; }
+    std::unique_ptr<widgets::InputInterface> CreateInputField(const SharedPort& port)
+    {
+        const std::string type = std::string{port->GetDataType()};
+        if (!_input_field_constructors.contains(type))
+        {
+            return nullptr;
+        }
+
+        return _input_field_constructors.at(type)(std::string{port->GetVarName()}, port->GetData());
+    }
 
   private:
     template<NodeViewType ViewType>
@@ -100,12 +107,9 @@ class ViewFactory : public flow::NodeFactory
     }
 
   private:
-    std::unordered_map<std::string, NodeViewConstructorCallback> _constructors;
+    std::unordered_map<std::string, NodeViewConstructorCallback_t> _constructors;
 
-    using InputFieldConstructor_t =
-        std::function<std::shared_ptr<widgets::InputInterface>(std::string name, const SharedNodeData&)>;
-
-    std::unordered_map<std::string, InputFieldConstructor_t> _input_field_contructors;
+    std::unordered_map<std::string, InputFieldConstructor_t> _input_field_constructors;
 };
 
 FLOW_UI_NAMESPACE_END
